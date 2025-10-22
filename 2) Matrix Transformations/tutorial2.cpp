@@ -1,5 +1,10 @@
 #include "../nclgl/window.h"
-#include "Renderer.h"
+#include "../nclgl/OGLRenderer.h"
+
+class Renderer : public OGLRenderer {
+	Renderer();
+	~Renderer();
+};
 
 int main() {
 	Window w("Vertex Transformation!", 800, 600, false);
