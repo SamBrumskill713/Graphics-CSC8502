@@ -5,6 +5,7 @@ class Renderer : public OGLRenderer {
 public:
 	Renderer(Window& parent) : OGLRenderer(parent) {
 		triangle = Mesh::GenerateTriangle();
+		quad = Mesh::GenerateQuad();
 
 		basicShader = new Shader("basicVertex.glsl", "colourFragment.glsl");
 
@@ -14,6 +15,7 @@ public:
 		init = true;
 	}
 	~Renderer(void) override {
+		delete quad;
 		delete triangle;
 		delete basicShader;
 	}
@@ -23,9 +25,11 @@ public:
 
 		BindShader(basicShader);
 		triangle->Draw();
+		quad->Draw();
 	}
 
 protected:
+	Mesh* quad;
 	Mesh* triangle;
 	Shader* basicShader;
 };
