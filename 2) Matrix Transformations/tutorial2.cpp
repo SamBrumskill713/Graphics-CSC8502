@@ -6,6 +6,7 @@ public:
 	Renderer(Window& parent) : OGLRenderer(parent) {
 		triangle = Mesh::GenerateTriangle();
 		matrixShader = new Shader("MatrixVertex.glsl", "colourFragment.glsl");
+		camera = new Camera();
 
 		if (!matrixShader->LoadSuccess()) {
 			return;
@@ -18,6 +19,7 @@ public:
 	virtual ~Renderer(void) {
 		delete triangle;
 		delete matrixShader;
+		delete camera;
 	}
 
 	virtual void RenderScene() {
@@ -41,6 +43,12 @@ public:
 		}
 	};
 
+	virtual void UpdateScene(float dt) {
+		camera->UpdateCamera(dt);
+		viewMatrix = camera->BuildViewMatrix();
+		//viewMatrix = viewMatrix * Matrix4::Scale(Vector3(scale, scale, scale));
+	}
+
 	void SwitchToPerspective() {
 		projMatrix = Matrix4::Perspective(1.0f, 10000.0f, (float)width / (float)height, 45.0f);
 	}
@@ -56,6 +64,7 @@ public:
 protected:
 	Mesh* triangle;
 	Shader* matrixShader;
+	Camera* camera;
 	float scale;
 	float rotation;
 	Vector3 position;
@@ -108,6 +117,7 @@ int main() {
 		renderer.SetRotation(rotation);
 		renderer.SetScale(scale);
 		renderer.SetPosition(position);
+		renderer.UpdateScene(w.GetTimer()->GetTimeDeltaSeconds());
 		renderer.RenderScene();
 		renderer.SwapBuffers();
 	}
