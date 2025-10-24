@@ -165,6 +165,7 @@ Resizes the rendering area. Should only be called by the Window class!
 Does lower bounds checking on input values, so should be reasonably safe
 to call.
 */
+
 void OGLRenderer::Resize(int x, int y)	{
 	width	= std::max(x,1);	
 	height	= std::max(y,1);
@@ -202,6 +203,7 @@ projMatrix, and textureMatrix. Updates them with the relevant
 matrix data. Sanity checks currentShader, so is always safe to
 call.
 */
+
 void OGLRenderer::UpdateShaderMatrices()	{
 	if(currentShader) {
 		glUniformMatrix4fv(glGetUniformLocation(currentShader->GetProgram(), "modelMatrix")   ,	1,false, modelMatrix.values);
@@ -215,6 +217,15 @@ void OGLRenderer::UpdateShaderMatrices()	{
 void OGLRenderer::BindShader(Shader*s) {
 	currentShader = s;
 	glUseProgram(s->GetProgram());
+}
+
+
+void OGLRenderer::SetTextureRpeating(GLuint target, bool repeating)
+{
+	glBindTexture(GL_TEXTURE_2D, target);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, repeating ? GL_REPEAT : GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, repeating ? GL_REPEAT : GL_CLAMP);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 #ifdef OPENGL_DEBUGGING

@@ -61,6 +61,7 @@ public:
 protected:
 	virtual void	Resize(int x, int y);	
 	void			UpdateShaderMatrices();
+
 	void			BindShader(Shader*s);
 
 	void StartDebugGroup(const std::string& s) {
@@ -70,6 +71,7 @@ protected:
 	void EndDebugGroup() {
 		glPopDebugGroup();
 	}
+	void SetTextureRpeating(GLuint target, bool state);
 
 	Matrix4 projMatrix;		//Projection matrix
 	Matrix4 modelMatrix;	//Model matrix. NOT MODELVIEW
