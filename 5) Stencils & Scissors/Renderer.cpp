@@ -67,9 +67,9 @@ void Renderer::RenderScene() {
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		glStencilFunc(GL_EQUAL, 2, ~0);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-		glBindTexture(GL_TEXTURE_2D, textures[0]);
-		meshes[0]->Draw();
-		glDisable(GL_SCISSOR_TEST);
-		glDisable(GL_STENCIL_TEST);
 	}
+	glBindTexture(GL_TEXTURE_2D, textures[0]);
+	meshes[0]->Draw();
+	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_STENCIL_TEST);
 }
