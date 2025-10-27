@@ -220,7 +220,7 @@ void OGLRenderer::BindShader(Shader*s) {
 }
 
 
-void OGLRenderer::SetTextureRpeating(GLuint target, bool repeating)
+void OGLRenderer::SetTextureRepeating(GLuint target, bool repeating)
 {
 	glBindTexture(GL_TEXTURE_2D, target);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, repeating ? GL_REPEAT : GL_CLAMP);
