@@ -1,11 +1,14 @@
 #include "SceneNode.h"
 
-SceneNode::SceneNode(Mesh* m, Vector4 colour)
+SceneNode::SceneNode(Mesh* m, Vector4 colour, Shader* s)
 {
 	this->mesh = m;
 	this->colour = colour;
 	parent = NULL;
 	modelScale = Vector3(1, 1, 1);
+	boundingRadius = 1.0f;
+	dstanceFromCamera = 0.0f;
+	texture = 0;
 }
 
 SceneNode::~SceneNode(void)
@@ -19,6 +22,11 @@ void SceneNode::AddChild(SceneNode* s)
 {
 	children.push_back(s);
 	s->parent = this;
+}
+
+void SceneNode::RemoveChild(int index)
+{
+	children.erase(children.begin() + index);
 }
 
 void SceneNode::Update(float dt)

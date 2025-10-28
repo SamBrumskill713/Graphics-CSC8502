@@ -7,6 +7,11 @@ CubeRobot::CubeRobot(Mesh* cube)
 	body->SetTransform(Matrix4::Translation(Vector3(0, 35, 0)));
 	AddChild(body);
 
+	SceneNode* hips = new SceneNode(cube, Vector4(0, 1, 0, 1));
+	hips->SetModelScale(Vector3(10, 5, 5));
+	hips->SetTransform(Matrix4::Translation(Vector3(0, -10, 0)));
+	body->AddChild(hips);
+
 	head = new SceneNode(cube, Vector4(0, 1, 0, 1));
 	head->SetModelScale(Vector3(5, 5, 5));
 	head->SetTransform(Matrix4::Translation(Vector3(0, 30, 0)));
@@ -25,12 +30,14 @@ CubeRobot::CubeRobot(Mesh* cube)
 	SceneNode* leftLeg = new SceneNode(cube, Vector4(0, 0, 1, 1));
 	leftLeg->SetModelScale(Vector3(3, -17.5, 3));
 	leftLeg->SetTransform(Matrix4::Translation(Vector3(-8, 0, 0)));
-	body->AddChild(leftLeg);
+	hips->AddChild(leftLeg);
 
 	SceneNode* rightLeg = new SceneNode(cube, Vector4(0, 0, 1, 1));
 	rightLeg->SetModelScale(Vector3(3, -17.5, 3));
 	rightLeg->SetTransform(Matrix4::Translation(Vector3(8, 0, 0)));
-	body->AddChild(rightLeg);
+	hips->AddChild(rightLeg);
+
+	//body->RemoveChild(1);
 }
 
 void CubeRobot::Update(float dt)

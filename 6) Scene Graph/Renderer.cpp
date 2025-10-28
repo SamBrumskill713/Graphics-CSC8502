@@ -31,16 +31,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent)
 		//std::cout << robots[i] << "\n";
 	}
 
-	root->SetModelScale(Vector3(5, 2, 5));
-
-	int idx = 0;
-
-	for (auto i = root->GetChildIteratorStart(); i != root->GetChildIteratorEnd(); ++i) 
-	{
-		Matrix4 t = (*i)->GetTransform(); // local transform set by SetTransform()
-		Vector3 p = t.GetPositionVector();
-		std::cout << "child[" << idx++ << "] local pos: " << p.x << ", " << p.y << ", " << p.z << std::endl;
-	}
+	root->SetModelScale(Vector3(root->GetModelScale().x * 10, root->GetModelScale().y * 10, root->GetModelScale().z * 10));
 
 	//root->AddChild(new CubeRobot(cube));
 
