@@ -35,7 +35,7 @@ CubeRobot::CubeRobot(Mesh* cube)
 
 void CubeRobot::Update(float dt)
 {
-	transform = Matrix4::Rotation(30.0f * dt, Vector3(0, 1, 0));
+	transform = transform * Matrix4::Rotation(30.0f * dt, Vector3(0, 1, 0));
 
 	head->SetTransform(head->GetTransform() * Matrix4::Rotation(-30.0f * dt, Vector3(0, 1, 0)));
 

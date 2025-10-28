@@ -3,6 +3,7 @@
 #include "../nclgl/Camera.h"
 #include "../nclgl/SceneNode.h"
 #include "../nclgl/CubeRobot.h"
+#include <vector>
 
 class Renderer : public OGLRenderer {
 public:
@@ -19,4 +20,5 @@ protected:
 	Camera* camera;
 	Mesh* cube;
 	Shader* shader;
+	std::vector<CubeRobot*> robots;
 };

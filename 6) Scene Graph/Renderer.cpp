@@ -16,7 +16,33 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent)
 	camera->SetPosition(Vector3(0, 30, 175));
 
 	root = new SceneNode();
-	root->AddChild(new CubeRobot(cube));
+
+	const int robotCount = 10;
+	robots.reserve(robotCount);
+
+	for (int i = 0; i < robotCount; ++i) {
+		CubeRobot* bots = new CubeRobot(cube);
+		float spacing = 100.0f;
+		float x = (i % 5 - 2) * spacing;
+		float z = (i / 5) * -spacing;
+		bots->SetTransform(Matrix4::Translation(Vector3(x, 0, z)));
+		root->AddChild(bots);
+		robots.push_back(bots);
+		//std::cout << robots[i] << "\n";
+	}
+
+	root->SetModelScale(Vector3(5, 2, 5));
+
+	int idx = 0;
+
+	for (auto i = root->GetChildIteratorStart(); i != root->GetChildIteratorEnd(); ++i) 
+	{
+		Matrix4 t = (*i)->GetTransform(); // local transform set by SetTransform()
+		Vector3 p = t.GetPositionVector();
+		std::cout << "child[" << idx++ << "] local pos: " << p.x << ", " << p.y << ", " << p.z << std::endl;
+	}
+
+	//root->AddChild(new CubeRobot(cube));
 
 	glEnable(GL_DEPTH_TEST);
 	init = true;
@@ -28,6 +54,7 @@ Renderer::~Renderer(void)
 	delete shader;
 	delete camera;
 	delete cube;
+	robots.clear();
 }
 
 void Renderer::UpdateScene(float dt) {
@@ -53,7 +80,7 @@ void Renderer::DrawNode(SceneNode* n)
 		Matrix4 model = n->GetWorldTransform() * Matrix4::Scale(n->GetModelScale());
 		glUniformMatrix4fv(glGetUniformLocation(shader->GetProgram(), "modelMatrix"), 1, false, model.values);
 		glUniform4fv(glGetUniformLocation(shader->GetProgram(), "nodeColour"), 1, (float*)&n->GetColour());
-		glUniform1i(glGetUniformLocation(shader -> GetProgram(), "useTexture "), 0);
+		glUniform1i(glGetUniformLocation(shader -> GetProgram(), "useTexture"), 0);
 		n->Draw(*this);
 	}
 
