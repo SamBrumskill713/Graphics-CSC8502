@@ -37,6 +37,14 @@ CubeRobot::CubeRobot(Mesh* cube)
 	rightLeg->SetTransform(Matrix4::Translation(Vector3(8, 0, 0)));
 	hips->AddChild(rightLeg);
 
+	body->SetBoundingRadius(15.0f);
+	hips->SetBoundingRadius(15.0f);
+	head->SetBoundingRadius(5.0f);
+	leftArm->SetBoundingRadius(18.0f);
+	rightArm->SetBoundingRadius(18.0f);
+	leftLeg->SetBoundingRadius(18.0f);
+	rightLeg->SetBoundingRadius(18.0f);
+
 	//body->RemoveChild(1);
 }
 

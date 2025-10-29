@@ -1,4 +1,5 @@
 #include "Renderer.h"
+#include "Renderer.h"
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent)
 {

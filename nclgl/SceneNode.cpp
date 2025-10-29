@@ -7,7 +7,7 @@ SceneNode::SceneNode(Mesh* m, Vector4 colour, Shader* s)
 	parent = NULL;
 	modelScale = Vector3(1, 1, 1);
 	boundingRadius = 1.0f;
-	dstanceFromCamera = 0.0f;
+	distanceFromCamera = 0.0f;
 	texture = 0;
 }
 
