@@ -39,8 +39,8 @@ enum MeshBuffer {
 	MAX_BUFFER
 };
 
-class Mesh	{
-public:	
+class Mesh {
+public:
 	struct SubMesh {
 		int start;
 		int count;
@@ -77,7 +77,7 @@ public:
 	}
 
 	int		GetSubMeshCount() const {
-		return (int)meshLayers.size(); 
+		return (int)meshLayers.size();
 	}
 
 	bool GetSubMesh(int i, const SubMesh* s) const;
