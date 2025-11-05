@@ -170,7 +170,7 @@ void OGLRenderer::SetShaderLight(const Light& l)
 {
 	glUniform3fv(glGetUniformLocation(currentShader->GetProgram(), "lightPos"), 1, (float*) &l.GetPosition());
 	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "lightColour"), 1, (float*) &l.GetColour());
-	glUniform4fv(glGetUniformLocation(currentShader->GetProgram(), "lightRadius"), 1, l.GetRadius());
+	glUniform1f(glGetUniformLocation(currentShader->GetProgram(), "lightRadius"), l.GetRadius());
 }
 
 void OGLRenderer::Resize(int x, int y)	{

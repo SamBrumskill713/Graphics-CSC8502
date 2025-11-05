@@ -22,7 +22,7 @@ public:
 	
 	Matrix4 BuildViewMatrix();
 
-	Vector3 GetPostion() const { return position; }
+	Vector3 GetPosition() const { return position; }
 	void SetPosition(Vector3 val) { position = val; }
 
 	float GetYaw() const { return yaw; }

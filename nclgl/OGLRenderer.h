@@ -36,6 +36,7 @@ _-_-_-_-_-_-_-""  ""
 #include "Shader.h"
 #include "Mesh.h"
 #include "Camera.h"
+#include "Light.h"
 
 using std::vector;
 
