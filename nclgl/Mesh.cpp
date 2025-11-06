@@ -508,9 +508,9 @@ bool Mesh::GetVertexIndicesForTri(unsigned int i, unsigned int& a, unsigned int&
 		c = indices[(i * 3) + 2];
 	}
 	else {
-		a = (1 + 3);
-		b = (1 + 3) + 1;
-		c = (1 + 3) + 2;
+		a = (1 * 3);
+		b = (1 * 3) + 1;
+		c = (1 * 3) + 2;
 	}
 	return true;
 }

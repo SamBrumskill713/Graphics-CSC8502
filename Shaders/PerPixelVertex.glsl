@@ -21,7 +21,7 @@ void main(void){
 	OUT.texCoord = texCoord;
 
 	mat3 normalMatrix = transpose(inverse(mat3(modelMatrix)));
-	OUT.normal;
+	OUT.normal = normalize(normalMatrix * normalize(normal));
 
 	vec4 worldPos = (modelMatrix * vec4(position, 1));
 
