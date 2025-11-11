@@ -1,4 +1,12 @@
 #include "Renderer.h"
+#include "Renderer.h"
+#include "Renderer.h"
+#include "Renderer.h"
+#include "Renderer.h"
+#include "Renderer.h"
+#include "Renderer.h"
+#include "Renderer.h"
+#include "Renderer.h"
 #include "../nclgl/Light.h"
 #include "../nclgl/HeightMap.h"
 #include "../nclgl/Shader.h"
@@ -100,15 +108,15 @@ void Renderer::DrawHeightMap()
 	heightMap->Draw();
 }
 
-void Renderer::DrawWater()
+void Renderer::DrawWater(float transparancy)
 {
 	BindShader(reflectShader);
 
 	glUniform3fv(glGetUniformLocation(reflectShader->GetProgram(), "cameraPos"), 1,
 		(float*)&camera->GetPosition());
-
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "diffuseTex"), 0);
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(),    "cubeTex"), 2);
+	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "transparancy"), transparancy);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, waterTex);
@@ -149,5 +157,5 @@ void Renderer::RenderScene() {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	DrawSkybox();
 	DrawHeightMap();
-	DrawWater();
+	DrawWater(0.5f);
 }

@@ -2,6 +2,7 @@
 
 uniform sampler2D diffuseTex;
 uniform samplerCube cubeTex;
+uniform float transparancy;
 uniform vec3 cameraPos;
 
 in Vertex{
@@ -19,6 +20,9 @@ void main(void){
 
 	vec3 reflectDir = reflect(-viewDir, normalize(IN.normal));
 	vec4 reflectTex = texture(cubeTex, reflectDir);
+
+	diffuse.a = 0.5f;
+	reflectTex.a = transparancy;
 
 	fragColour = reflectTex + (diffuse * 0.25f);
 }

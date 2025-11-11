@@ -30,6 +30,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
 		shadowTex, 0);
+	glDrawBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	sceneMeshes.emplace_back(Mesh::GenerateQuad());
 	sceneMeshes.emplace_back(Mesh::LoadFromMeshFile("Sphere.msh"));
@@ -42,6 +44,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	SetTextureRepeating(sceneDiffuse, true);
 	SetTextureRepeating(sceneBump, true);
+	glEnable(GL_DEPTH_TEST);
 
 	sceneTransforms.resize(4);
 	sceneTransforms[0] = Matrix4::Rotation(90, Vector3(1, 0, 0)) *
@@ -73,6 +76,7 @@ void Renderer::UpdateScene(float dt) {
 		sceneTransforms[i] = Matrix4::Translation(t) *
 			Matrix4::Rotation(sceneTime * 10 * i, Vector3(1, 0, 0));
 	}
+	MoveLight(light->GetPosition(), light->GetColour());
 }
 
 void Renderer::RenderScene() {
@@ -87,6 +91,7 @@ void Renderer::DrawShadowScene() {
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glViewport(0, 0, SHADOWSIZE, SHADOWSIZE);
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	glCullFace(GL_FRONT);
 
 	BindShader(shadowShader);
 
@@ -105,6 +110,7 @@ void Renderer::DrawShadowScene() {
 	glViewport(0, 0, width, height);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glCullFace(GL_BACK);
 }
 
 void Renderer::DrawMainScene() {
@@ -134,4 +140,27 @@ void Renderer::DrawMainScene() {
 		UpdateShaderMatrices();
 		sceneMeshes[i]->Draw();
 	}
+}
+
+void Renderer::MoveLight(Vector3 position, Vector4 colour)
+{
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_J)) {
+		position.x -= 1.0f;
+	}
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_L)) {
+		position.x += 1.0f;
+	}
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_I)) {
+		position.z -= 1.0f;
+	}
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_K)) {
+		position.z += 1.0f;
+	}
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_LEFT)) {
+		colour.x -= 1.0f;
+	}
+	if (Window::GetKeyboard()->KeyDown(KEYBOARD_RIGHT)) {
+		colour.x += 1.0f;
+	}
+	light->SetPosition(position);
 }

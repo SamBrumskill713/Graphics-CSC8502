@@ -13,6 +13,7 @@ class Renderer : public OGLRenderer {
 protected:
 	void DrawShadowScene();
 	void DrawMainScene();
+	void MoveLight(Vector3 position, Vector4 colour);
 
 	GLuint shadowTex;
 	GLuint shadowFBO;

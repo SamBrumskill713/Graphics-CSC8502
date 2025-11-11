@@ -59,7 +59,7 @@ void Renderer::UpdateScene(float dt) {
 void Renderer::BuildNodeLists(SceneNode* from)
 {
 	if (frameFrustrum.InsideFrustrum(*from)) {
-		Vector3 dir = from->GetWorldTransform().GetPositionVector() - camera->GetPostion();
+		Vector3 dir = from->GetWorldTransform().GetPositionVector() - camera->GetPosition();
 		from->SetCameraDistance(Vector3::Dot(dir, dir));
 
 		if (from->GetColour().w < 1.0f) {

@@ -3,11 +3,11 @@
 #include "../nclgl/HeightMap.h"
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
-	heightMap = new HeightMap(TEXTUREDIR"noise.png");
-	camera = new Camera(-40, 270, Vector3());
+	heightMap = new HeightMap(TEXTUREDIR"swampHeightmap.png");
+	camera = new Camera(-40, 180, Vector3());
 
 	Vector3 dimensions = heightMap->GetHeightmapSize();
-	camera->SetPosition(dimensions * Vector3(0.5, 2, 0.5));
+	camera->SetPosition(dimensions * Vector3(0.5, 10, 0.5/2.0));
 
 	shader = new Shader("TexturedVertex.glsl", "texturedfragment.glsl");
 
