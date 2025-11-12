@@ -4,6 +4,7 @@
 class HeightMap;
 class Camera;
 class Mesh;
+class Light;
 class MeshAnimation;
 
 class Renderer : public OGLRenderer {
@@ -24,8 +25,14 @@ protected:
 	void checkBuffers();
 	void setCameraNodes();
 	void setVariables();
+	void toggleCamera() {if(isCameraFree != true){isCameraFree != isCameraFree;}};
+	bool isCameraFree;
 	HeightMap* heightMap;
 	Shader* shader;
+	Shader* reflectShader;
+	Shader* skyboxShader;
+	Shader* lightShader;
+	Light* light;
 	Camera* camera;
 	Mesh* quad;
 	Mesh* sphere;
@@ -33,4 +40,9 @@ protected:
 	MeshAnimation* animation;
 	vector<GLuint> matTextures;
 	GLuint terrainTex;
+	GLuint waterTex;
+	GLuint cubeMap;
+	GLuint terrainBump;
+	float waterRotate;
+	float waterCycle;
 };

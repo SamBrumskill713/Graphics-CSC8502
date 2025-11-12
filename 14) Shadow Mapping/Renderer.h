@@ -1,5 +1,7 @@
 #pragma once
 #include "../nclgl/OGLRenderer.h"
+#include <array>
+#include <vector>
 
 class Camera;
 class Mesh;
@@ -16,6 +18,7 @@ protected:
 	void MoveLight(Vector3 position, Vector4 colour);
 
 	GLuint shadowTex;
+	GLuint shadowTex2;
 	GLuint shadowFBO;
 
 	GLuint sceneDiffuse;
@@ -30,4 +33,6 @@ protected:
 
 	Camera* camera;
 	Light* light;
+	Light* light2;	
+	//std::vector<Light*> lights;
 };

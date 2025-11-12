@@ -1,12 +1,4 @@
 #include "Renderer.h"
-#include "Renderer.h"
-#include "Renderer.h"
-#include "Renderer.h"
-#include "Renderer.h"
-#include "Renderer.h"
-#include "Renderer.h"
-#include "Renderer.h"
-#include "Renderer.h"
 #include "../nclgl/Light.h"
 #include "../nclgl/HeightMap.h"
 #include "../nclgl/Shader.h"
@@ -116,7 +108,8 @@ void Renderer::DrawWater(float transparancy)
 		(float*)&camera->GetPosition());
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "diffuseTex"), 0);
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(),    "cubeTex"), 2);
-	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "transparancy"), transparancy);
+	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "transparancy"), 
+		transparancy);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, waterTex);
@@ -137,7 +130,7 @@ void Renderer::DrawWater(float transparancy)
 		Matrix4::Rotation(waterRotate, Vector3(0, 0, 1));
 
 	UpdateShaderMatrices();
-	//SetShaderLight(*light);
+	SetShaderLight(*light);
 	quad->Draw();
 }
 

@@ -3,6 +3,7 @@
 uniform sampler2D diffuseTex;
 uniform sampler2D bumpTex;
 uniform sampler2D shadowTex;
+//uniform sampler2D shadowTex2;
 
 uniform vec3 cameraPos;
 uniform vec4 lightColour;

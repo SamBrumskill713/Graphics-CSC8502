@@ -7,10 +7,11 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 
-	projMatrix = Matrix4::Perspective(1.0f, 10000.0f, (float)width / (float)height, 45.0f);
+	projMatrix = Matrix4::Perspective(1.0f, 10000.0f, (float)width / (float)height, 
+		45.0f);
 	camera = new Camera(-3, 0.0f, Vector3(0, 1.4f, 4.0f));
 
-	shader = new Shader("SkinningVertex.glsl", "texturedFragment.glsl");
+	shader = new Shader("SkinningVertex.glsl", "texturedfragment.glsl");
 
 	if (!shader->LoadSuccess()) {
 		return;
@@ -26,7 +27,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		const string* filename = nullptr;
 		matEntry->GetEntry("Diffuse", &filename);
 		string path = TEXTUREDIR + *filename;
-		GLuint texID = SOIL_load_OGL_texture(path.c_str(), SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
+		GLuint texID = SOIL_load_OGL_texture(path.c_str(), 
+			SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
 		matTextures.emplace_back(texID);
 	}
 	currentFrame = 0;

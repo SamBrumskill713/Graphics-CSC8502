@@ -7,7 +7,8 @@
 
 class SceneNode {
 public:
-	SceneNode(Mesh* m = nullptr, Vector4 colour = Vector4(1, 1, 1, 1), Shader* s = nullptr);
+	SceneNode(Mesh* m = nullptr, Vector4 colour = Vector4(1, 1, 1, 1), 
+		Shader* s = nullptr);
 	~SceneNode(void);
 
 	void SetTransform(const Matrix4& matrix) { transform = matrix; }
@@ -30,8 +31,10 @@ public:
 	
 	virtual void Draw(const OGLRenderer& r);
 
-	std::vector<SceneNode*>::const_iterator GetChildIteratorStart() { return children.begin(); }
-	std::vector<SceneNode*>::const_iterator GetChildIteratorEnd() { return children.end(); }
+	std::vector<SceneNode*>::const_iterator GetChildIteratorStart() 
+	{ return children.begin(); }
+	std::vector<SceneNode*>::const_iterator GetChildIteratorEnd() 
+	{ return children.end(); }
 
 	float GetBoundingRadius() const { return boundingRadius; }
 	void SetBoundingRadius(float f) { boundingRadius = f; }

@@ -6,8 +6,9 @@
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	camera = new Camera(-30.0f, 315.0f, Vector3(-8.0f, 5.0f, 8.0f));
+	//Light* lights = new Light[2];
 	light = new Light(Vector3(-20.0f, 10.0f, -20.0f), Vector4(1, 1, 1, 1), 250.0f);
-
+	light2 = new Light(Vector3(20.f, 10.0f, 20.0f), Vector4(1, 1, 1, 1), 250.0f);
 	sceneShader = new Shader("shadowSceneVertex.glsl", "shadowSceneFragment.glsl");
 	shadowShader = new Shader("shadowVertex.glsl", "shadowFragment.glsl");
 
@@ -26,10 +27,23 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+	/*glGenTextures(1, &shadowTex2);
+	glBindTexture(GL_TEXTURE_2D, shadowTex2);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE,
+		SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+	glBindTexture(GL_TEXTURE_2D, 0);*/
+
 	glGenFramebuffers(1, &shadowFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
 		shadowTex, 0);
+	/*glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+		shadowTex2, 0);*/
 	glDrawBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -56,6 +70,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 Renderer::~Renderer(void) {
 	glDeleteTextures(1, &shadowTex);
+	glDeleteTextures(1, &shadowTex2);
 	glDeleteFramebuffers(1, &shadowFBO);
 
 	for (auto& i : sceneMeshes) {
@@ -116,6 +131,10 @@ void Renderer::DrawShadowScene() {
 void Renderer::DrawMainScene() {
 	BindShader(sceneShader);
 	SetShaderLight(*light);
+	//SetShaderLight(*light2);
+	//for (int i = 0; i < 2; ++i) {
+		//SetShaderLight(light[i]);
+	//}
 	viewMatrix = camera->BuildViewMatrix();
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 
 		45.0f);
@@ -163,4 +182,5 @@ void Renderer::MoveLight(Vector3 position, Vector4 colour)
 		colour.x += 1.0f;
 	}
 	light->SetPosition(position);
+	light->SetColour(colour);
 }
