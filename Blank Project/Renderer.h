@@ -15,6 +15,7 @@ public:
 	~Renderer(void);
 	void RenderScene() override;
 	void UpdateScene(float dt) override;
+	void toggleCamera() { isCameraFree != isCameraFree; }
 
 protected:
 	void DrawHeightMap();
@@ -29,7 +30,7 @@ protected:
 	void setVariables();
 	void checkAnimation();
 	void checkModelMatrial();
-	void toggleCamera() {if(isCameraFree != true){isCameraFree != isCameraFree;}};
+	void checkCurrentCamera();
 	void Renderer::MoveLight(Vector3 position, Vector4 colour);
 	bool isCameraFree;
 	HeightMap* heightMap;
@@ -39,7 +40,8 @@ protected:
 	Shader* lightShader;
 	Shader* characterShader;
 	Light* light;
-	Camera* camera;
+	Camera* activeCamera;
+	Camera* freeCamera;
 	Mesh* quad;
 	Mesh* sphere;
 	Mesh* Tree;
@@ -53,6 +55,8 @@ protected:
 	GLuint terrainBump;
 	Matrix4 soldierModel;
 	Vector3 soldierPos;
+	Matrix4 TreeModel;
+	Vector3 TreePos;
 	float waterRotate;
 	float waterCycle;
 	int currentFrame;

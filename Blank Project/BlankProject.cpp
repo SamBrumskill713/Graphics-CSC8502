@@ -23,6 +23,10 @@ int main()	{
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_F5)) {
 			Shader::ReloadAllShaders();
 		}
+		
+		if (Window::GetKeyboard()->KeyDown(KEYBOARD_1)) {
+			renderer.toggleCamera();
+		}
 	}
 	return 0;
 }

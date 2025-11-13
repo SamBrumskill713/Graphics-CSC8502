@@ -26,7 +26,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 Renderer::~Renderer(void) {
 	delete heightMap;
-	delete camera;
+	delete activeCamera;
 	delete reflectShader;
 	delete skyboxShader;
 	delete lightShader;
@@ -38,8 +38,8 @@ Renderer::~Renderer(void) {
 }
 
 void Renderer::UpdateScene(float dt) {
-	camera->UpdateCamera(dt);
-	viewMatrix = camera->BuildViewMatrix();
+	activeCamera->UpdateCamera(dt);
+	viewMatrix = activeCamera->BuildViewMatrix();
 	waterRotate += dt;
 	waterCycle += dt;
 	frameTime -= dt;
@@ -48,6 +48,7 @@ void Renderer::UpdateScene(float dt) {
 		frameTime += 1.0f / soldierAnimation->GetFrameRate();
 	}
 	MoveLight(light->GetPosition(), light->GetColour());
+	checkCurrentCamera();
 }
 
 void Renderer::RenderScene() {
@@ -63,7 +64,7 @@ void Renderer::DrawWater(float transparancy)
 	BindShader(reflectShader);
 
 	glUniform3fv(glGetUniformLocation(reflectShader->GetProgram(), "cameraPos"), 1,
-		(float*)&camera->GetPosition());
+		(float*)&activeCamera->GetPosition());
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "diffuseTex"), 0);
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "cubeTex"), 2);
 	glUniform1f(glGetUniformLocation(reflectShader->GetProgram(), "transparancy"), 
@@ -109,7 +110,7 @@ void Renderer::DrawHeightMap()
 	BindShader(lightShader);
 	SetShaderLight(*light);
 	glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1,
-		(float*)&camera->GetPosition());
+		(float*)&activeCamera->GetPosition());
 
 	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), 0);
 	glActiveTexture(GL_TEXTURE0);
@@ -190,9 +191,9 @@ void Renderer::setCameraNodes()
 
 void Renderer::setVariables()
 {
-	camera = new Camera(-40, 180, Vector3());
+	activeCamera = new Camera(-40, 180, Vector3());
 	Vector3 dimensions = heightMap->GetHeightmapSize();
-	camera->SetPosition(dimensions * Vector3(0.5, 10, 0.5 / 2.0));
+	activeCamera->SetPosition(dimensions * Vector3(0.5, 10, 0.5 / 2.0));
 	isCameraFree = false;
 	projMatrix = Matrix4::Perspective(1.0f, 10000.0f, 
 		(float)width / (float)height, 45.0f);
@@ -258,6 +259,14 @@ void Renderer::DrawAnimations() {
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, soldierMatTextures[i]);
 		soldier->DrawSubMesh(i);
+	}
+}
+
+void Renderer::checkCurrentCamera()
+{
+	if (isCameraFree) {
+		//activeCamera = freeCamera;
+		std::cout << "camera is free\n";
 	}
 }
 
