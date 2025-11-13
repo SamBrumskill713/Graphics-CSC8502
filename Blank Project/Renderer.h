@@ -6,6 +6,8 @@ class Camera;
 class Mesh;
 class Light;
 class MeshAnimation;
+class MeshMaterial;
+class Matrix4;
 
 class Renderer : public OGLRenderer {
 public:
@@ -16,7 +18,7 @@ public:
 
 protected:
 	void DrawHeightMap();
-	void DrawWater();
+	void DrawWater(float transparancy);
 	void DrawSkybox();
 	void DrawAnimations();
 	void checkMeshes();
@@ -25,24 +27,34 @@ protected:
 	void checkBuffers();
 	void setCameraNodes();
 	void setVariables();
+	void checkAnimation();
+	void checkModelMatrial();
 	void toggleCamera() {if(isCameraFree != true){isCameraFree != isCameraFree;}};
+	void Renderer::MoveLight(Vector3 position, Vector4 colour);
 	bool isCameraFree;
 	HeightMap* heightMap;
 	Shader* shader;
 	Shader* reflectShader;
 	Shader* skyboxShader;
 	Shader* lightShader;
+	Shader* characterShader;
 	Light* light;
 	Camera* camera;
 	Mesh* quad;
 	Mesh* sphere;
 	Mesh* Tree;
-	MeshAnimation* animation;
-	vector<GLuint> matTextures;
+	Mesh* soldier;
+	MeshAnimation* soldierAnimation;	
+	MeshMaterial* soldierMaterial;
+	vector<GLuint> soldierMatTextures;
 	GLuint terrainTex;
 	GLuint waterTex;
 	GLuint cubeMap;
 	GLuint terrainBump;
+	Matrix4 soldierModel;
+	Vector3 soldierPos;
 	float waterRotate;
 	float waterCycle;
+	int currentFrame;
+	float frameTime;
 };

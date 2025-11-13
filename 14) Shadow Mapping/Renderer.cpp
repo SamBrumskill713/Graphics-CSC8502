@@ -16,6 +16,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		return;
 	}
 
+	//first shadow map
 	glGenTextures(1, &shadowTex);
 	glBindTexture(GL_TEXTURE_2D, shadowTex);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -27,7 +28,13 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	/*glGenTextures(1, &shadowTex2);
+	glGenFramebuffers(1, &shadowFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+		shadowTex, 0);
+
+	//second shadow map
+	glGenTextures(1, &shadowTex2);
 	glBindTexture(GL_TEXTURE_2D, shadowTex2);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -36,14 +43,13 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE,
 		SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
-	glBindTexture(GL_TEXTURE_2D, 0);*/
+	glBindTexture(GL_TEXTURE_2D, 0);
 
-	glGenFramebuffers(1, &shadowFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	glGenFramebuffers(1, &shadowFBO2);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO2);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-		shadowTex, 0);
-	/*glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-		shadowTex2, 0);*/
+		shadowTex2, 0);
+
 	glDrawBuffer(GL_NONE);
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -100,9 +106,8 @@ void Renderer::RenderScene() {
 	DrawMainScene();
 }
 
-void Renderer::DrawShadowScene() {
-	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
-
+void Renderer::RenderShadowFromLight(Light* l)
+{
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glViewport(0, 0, SHADOWSIZE, SHADOWSIZE);
 	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -110,7 +115,7 @@ void Renderer::DrawShadowScene() {
 
 	BindShader(shadowShader);
 
-	viewMatrix = Matrix4::BuildViewMatrix(light->GetPosition(), Vector3(0, 0, 0));
+	viewMatrix = Matrix4::BuildViewMatrix(l->GetPosition(), Vector3(0, 0, 0));
 
 	projMatrix = Matrix4::Perspective(1, 100, 1, 45);
 	shadowMatrix = projMatrix * viewMatrix;
@@ -128,13 +133,18 @@ void Renderer::DrawShadowScene() {
 	glCullFace(GL_BACK);
 }
 
+void Renderer::DrawShadowScene() {
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	RenderShadowFromLight(light);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO2);
+	RenderShadowFromLight(light2);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 void Renderer::DrawMainScene() {
 	BindShader(sceneShader);
-	SetShaderLight(*light);
-	//SetShaderLight(*light2);
-	//for (int i = 0; i < 2; ++i) {
-		//SetShaderLight(light[i]);
-	//}
+	//SetShaderLight(*light);
+	SetShaderLight(*light2);
 	viewMatrix = camera->BuildViewMatrix();
 	projMatrix = Matrix4::Perspective(1.0f, 15000.0f, (float)width / (float)height, 
 		45.0f);
@@ -142,6 +152,7 @@ void Renderer::DrawMainScene() {
 	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "diffuseTex"), 0);
 	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "bumpTex"), 1);
 	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "shadowTex"), 2);
+	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "shadowTex2"), 3);
 	glUniform3fv(glGetUniformLocation(sceneShader->GetProgram(), "cameraPos"), 1,
 		(float*)&camera->GetPosition());
 
@@ -153,6 +164,9 @@ void Renderer::DrawMainScene() {
 
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, shadowTex);
+	
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, shadowTex2);
 
 	for (int i = 0; i < 4; ++i) {
 		modelMatrix = sceneTransforms[i];
@@ -184,3 +198,5 @@ void Renderer::MoveLight(Vector3 position, Vector4 colour)
 	light->SetPosition(position);
 	light->SetColour(colour);
 }
+
+

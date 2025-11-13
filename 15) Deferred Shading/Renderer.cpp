@@ -2,7 +2,7 @@
 #include "../nclgl/Camera.h"
 #include "../nclgl/HeightMap.h"
 #include "../nclgl/Light.h"
-const int LIGHT_NUM = 32;
+const int LIGHT_NUM = 64;
 
 Renderer::Renderer(Window& parenet) : OGLRenderer(parenet) {
 	sphere = Mesh::LoadFromMeshFile("Sphere.msh");

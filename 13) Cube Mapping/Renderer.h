@@ -14,7 +14,7 @@ public:
 
 protected:
 	void DrawHeightMap();
-	void DrawWater(float transparancy);
+	void DrawWater();
 	void DrawSkybox();
 	Shader* lightShader;
 	Shader* reflectShader;

@@ -2,8 +2,8 @@
 
 uniform sampler2D diffuseTex;
 uniform samplerCube cubeTex;
-uniform float transparancy;
 uniform vec3 cameraPos;
+uniform float transparancy;
 
 in Vertex{
 	vec4 colour;

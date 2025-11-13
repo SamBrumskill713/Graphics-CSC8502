@@ -53,6 +53,7 @@ void Renderer::UpdateScene(float dt) {
 		currentFrame = (currentFrame + 1) % anim->GetFrameCount();
 		frameTime += 1.0f / anim->GetFrameRate();
 	}
+	std::cout << "delta Time: " << dt << "\n";
 }
 
 void Renderer::RenderScene() {

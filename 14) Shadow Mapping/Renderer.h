@@ -13,13 +13,16 @@ class Renderer : public OGLRenderer {
 	void UpdateScene(float dt) override;
 	void RenderScene() override;
 protected:
+	void RenderShadowFromLight(Light* l);
 	void DrawShadowScene();
 	void DrawMainScene();
 	void MoveLight(Vector3 position, Vector4 colour);
 
+
 	GLuint shadowTex;
 	GLuint shadowTex2;
 	GLuint shadowFBO;
+	GLuint shadowFBO2;
 
 	GLuint sceneDiffuse;
 	GLuint sceneBump;

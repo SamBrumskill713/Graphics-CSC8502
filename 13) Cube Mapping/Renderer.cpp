@@ -100,7 +100,7 @@ void Renderer::DrawHeightMap()
 	heightMap->Draw();
 }
 
-void Renderer::DrawWater(float transparancy)
+void Renderer::DrawWater()
 {
 	BindShader(reflectShader);
 
@@ -108,8 +108,8 @@ void Renderer::DrawWater(float transparancy)
 		(float*)&camera->GetPosition());
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "diffuseTex"), 0);
 	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(),    "cubeTex"), 2);
-	glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "transparancy"), 
-		transparancy);
+	//glUniform1i(glGetUniformLocation(reflectShader->GetProgram(), "transparancy"), 
+		//transparancy);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, waterTex);
@@ -150,5 +150,5 @@ void Renderer::RenderScene() {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	DrawSkybox();
 	DrawHeightMap();
-	DrawWater(0.5f);
+	DrawWater();
 }
