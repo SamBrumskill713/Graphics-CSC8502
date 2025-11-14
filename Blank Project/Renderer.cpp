@@ -73,14 +73,16 @@ void Renderer::UpdateScene(float dt) {
 void Renderer::RenderScene() {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	//DrawShadowScene(light);
-	fillBuffers();
-	createPointLights();
-	combineBuffers();
+	//fillBuffers();
+	//createPointLights();
+	DrawSkybox();
+	//combineBuffers();
 	viewMatrix = activeCamera->BuildViewMatrix();
 	projMatrix = Matrix4::Perspective(1.0f, 10000.0f,
 		(float)width / (float)height,
 		45.0f);
 	DrawSkybox();
+	DrawHeightMap();
 	DrawWater(0.1f);
 	DrawAnimations();
 }
