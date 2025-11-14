@@ -128,8 +128,6 @@ void Renderer::RenderShadowFromLight(Light* l)
 
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glViewport(0, 0, width, height);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glCullFace(GL_BACK);
 }
 
@@ -197,6 +195,8 @@ void Renderer::MoveLight(Vector3 position, Vector4 colour)
 	}
 	light->SetPosition(position);
 	light->SetColour(colour);
+	light2->SetPosition(position);
+	light2->SetColour(colour);
 }
 
 

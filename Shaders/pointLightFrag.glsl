@@ -2,7 +2,9 @@
 
 uniform sampler2D depthTex;
 uniform sampler2D normTex;
+uniform sampler2D shadowTex;
 
+uniform mat4 shadowMatrix;
 uniform vec2 pixelSize;
 uniform vec3 cameraPos;
 

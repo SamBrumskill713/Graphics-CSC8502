@@ -9,6 +9,9 @@
 #include <iostream>
 #include <vector>
 
+#define SHADOWSIZE 2048
+const int LIGHT_NUM = 2;
+
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	checkMeshes();
 	checkModelMatrial();
@@ -16,9 +19,14 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	checkTextures();
 	checkShaders();
 	setVariables();
+	GenerateScreenTexture(bufferDepthTex, true);
+	GenerateScreenTexture(bufferColourTex);
+	GenerateScreenTexture(bufferNormalTex);
+	GenerateScreenTexture(lightDiffuseTex);
+	GenerateScreenTexture(lightSpecularTex);
+	checkBuffers();
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
-	//glEnable(GL_CULL_FACE);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	init = true;
@@ -27,6 +35,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 Renderer::~Renderer(void) {
 	delete heightMap;
 	delete activeCamera;
+	//delete freeCamera;
 	delete reflectShader;
 	delete skyboxShader;
 	delete lightShader;
@@ -35,6 +44,16 @@ Renderer::~Renderer(void) {
 	delete soldier;
 	delete soldierAnimation;
 	delete soldierMaterial;
+	delete shadowShader;
+	glDeleteTextures(1, &bufferColourTex);
+	glDeleteTextures(1, &bufferNormalTex);
+	glDeleteTextures(1, &bufferDepthTex);
+	glDeleteTextures(1, &lightDiffuseTex);
+	glDeleteTextures(1, &lightSpecularTex);
+	glDeleteFramebuffers(1, &bufferFBO);
+	glDeleteFramebuffers(1, &pointLightFBO);
+	glDeleteTextures(1, &shadowTex);
+	glDeleteFramebuffers(1, &shadowFBO);
 }
 
 void Renderer::UpdateScene(float dt) {
@@ -53,8 +72,15 @@ void Renderer::UpdateScene(float dt) {
 
 void Renderer::RenderScene() {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	//DrawShadowScene(light);
+	fillBuffers();
+	createPointLights();
+	combineBuffers();
+	viewMatrix = activeCamera->BuildViewMatrix();
+	projMatrix = Matrix4::Perspective(1.0f, 10000.0f,
+		(float)width / (float)height,
+		45.0f);
 	DrawSkybox();
-	DrawHeightMap();
 	DrawWater(0.1f);
 	DrawAnimations();
 }
@@ -172,17 +198,69 @@ void Renderer::checkShaders()
 	skyboxShader = new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
 	lightShader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
 	characterShader = new Shader("SkinningVertex.glsl", "texturedfragment.glsl");
+	shadowShader = new Shader("shadowVertex.glsl", "shadowFragment.glsl");
+	sceneShader = new Shader("BumpVertex.glsl", "bufferFragment.glsl");
+	pointLightShader = new Shader("pointlightvert.glsl", "pointLightFrag.glsl");
+	combineShader = new Shader("combineVert.glsl", "combineFrag.glsl");
 
 	if (!reflectShader->LoadSuccess() ||
 		!skyboxShader->LoadSuccess() ||
 		!lightShader->LoadSuccess() ||
-		!characterShader->LoadSuccess()) {
+		!characterShader->LoadSuccess() ||
+		!shadowShader->LoadSuccess() ||
+		!sceneShader->LoadSuccess() ||
+		!pointLightShader->LoadSuccess() ||
+		!combineShader->LoadSuccess()) {
 		return;
 	}
 }
 
 void Renderer::checkBuffers()
 {
+	glGenTextures(1, &shadowTex);
+	glBindTexture(GL_TEXTURE_2D, shadowTex);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE,
+		SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glGenFramebuffers(1, &shadowFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+		shadowTex, 0);
+	glDrawBuffer(GL_NONE);
+
+	GLenum buffers[2] = {
+		GL_COLOR_ATTACHMENT0,
+		GL_COLOR_ATTACHMENT1
+	};
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glGenFramebuffers(1, &bufferFBO);
+	glGenFramebuffers(1, &pointLightFBO);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+		bufferColourTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+		bufferNormalTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+		bufferDepthTex, 0);
+	glDrawBuffers(2, buffers);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, pointLightFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+		lightDiffuseTex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+		lightSpecularTex, 0);
+	glDrawBuffers(2, buffers);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Renderer::setCameraNodes()
@@ -200,9 +278,22 @@ void Renderer::setVariables()
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 	light = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f),
 		Vector4(1, 1, 1, 1), heightmapSize.x);
+	pointLights = new Light[LIGHT_NUM];
 	soldierPos = Vector3(heightmapSize.x / 2, heightmapSize.y, heightmapSize.z/2);
 	soldierModel = Matrix4::Translation(soldierPos) * 
 		Matrix4::Scale(Vector3(100, 100, 100));
+	for (int i = 0; i < LIGHT_NUM; ++i) {
+		Light& l = pointLights[i];
+		l.SetPosition(Vector3(rand() % (int)heightmapSize.x, 150.0f,
+			rand() % (int)heightmapSize.z));
+
+		l.SetColour(Vector4(0.5f + (float)(rand() / (float)RAND_MAX),
+			0.5f + (float)(rand() / (float)RAND_MAX),
+			0.5f + (float)(rand() / (float)RAND_MAX),
+			1));
+
+		l.SetRadius(250.0f + (rand() % 250));
+	}
 	waterRotate = 0.0f;
 	waterCycle = 0.0f;
 	currentFrame = 0;
@@ -213,7 +304,8 @@ void Renderer::checkMeshes() {
 	quad = Mesh::GenerateQuad();
 	heightMap = new HeightMap(TEXTUREDIR"swampHeightmap.png");
 	soldier = Mesh::LoadFromMeshFile("Role_T.msh");
-	if (soldier == nullptr || heightMap == nullptr) {
+	sphere = Mesh::LoadFromMeshFile("Sphere.msh");
+	if (heightMap == nullptr) {
 		std::cout << "No model found";
 		return;
 	}
@@ -262,12 +354,154 @@ void Renderer::DrawAnimations() {
 	}
 }
 
+void Renderer::DrawShadowScene(Light* l)
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glViewport(0, 0, SHADOWSIZE, SHADOWSIZE);
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	glCullFace(GL_FRONT);
+
+	BindShader(shadowShader);
+
+	viewMatrix = Matrix4::BuildViewMatrix(l->GetPosition(), Vector3(0, 0, 0));
+
+	projMatrix = Matrix4::Perspective(1, 100, 1, 45);
+	shadowMatrix = projMatrix * viewMatrix;
+
+	modelMatrix.ToIdentity();
+	textureMatrix.ToIdentity();
+	UpdateShaderMatrices();
+	heightMap->Draw();
+
+	//DrawAnimations();
+
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glViewport(0, 0, width, height);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glCullFace(GL_BACK);
+}
+
 void Renderer::checkCurrentCamera()
 {
 	if (isCameraFree) {
 		//activeCamera = freeCamera;
-		std::cout << "camera is free\n";
 	}
+}
+
+void Renderer::GenerateScreenTexture(GLuint& into, bool depth)
+{
+	glGenTextures(1, &into);
+	glBindTexture(GL_TEXTURE_2D, into);
+
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	GLuint format = depth ? GL_DEPTH_COMPONENT24 : GL_RGBA8;
+	GLuint type = depth ? GL_DEPTH_COMPONENT : GL_RGBA;
+
+	glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, type,
+		GL_UNSIGNED_BYTE, NULL);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Renderer::fillBuffers()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+	BindShader(sceneShader);
+	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "diffuseTex"), 0);
+	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "bumpTex"), 1);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, terrainTex);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, terrainBump);
+
+	modelMatrix.ToIdentity();
+	viewMatrix = activeCamera->BuildViewMatrix();
+	projMatrix = Matrix4::Perspective(1.0f, 10000.0f, (float)width / (float)height, 45.0f);
+
+	UpdateShaderMatrices();
+
+	heightMap->Draw();
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Renderer::combineBuffers()
+{
+	BindShader(combineShader);
+	modelMatrix.ToIdentity();
+	UpdateShaderMatrices();
+
+	glUniform1i(glGetUniformLocation(combineShader->GetProgram(), "diffuseTex"), 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, bufferColourTex);
+
+	glUniform1i(glGetUniformLocation(combineShader->GetProgram(), "diffuseLight"), 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, lightDiffuseTex);
+
+	glUniform1i(glGetUniformLocation(combineShader->GetProgram(), "specularLights"), 2);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, lightSpecularTex);
+
+	quad->Draw();
+	glClear(GL_DEPTH_BUFFER_BIT);
+}
+
+void Renderer::createPointLights()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, pointLightFBO);
+	BindShader(pointLightShader);
+
+	glClearColor(0, 0, 0, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glBlendFunc(GL_ONE, GL_ONE);
+	glCullFace(GL_FRONT);
+	glDepthFunc(GL_ALWAYS);
+	glDepthMask(GL_FALSE);
+
+	glUniform1i(glGetUniformLocation(pointLightShader->GetProgram(), "depthTex"), 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, bufferDepthTex);
+
+	glUniform1i(glGetUniformLocation(pointLightShader->GetProgram(), "normTex"), 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, bufferNormalTex);
+
+	glUniform3fv(glGetUniformLocation(pointLightShader->GetProgram(), "cameraPos"),
+		1, (float*)&activeCamera->GetPosition());
+
+	glUniform2f(glGetUniformLocation(pointLightShader->GetProgram(), "pixelSize"),
+		1.0f / width, 1.0f / height);
+
+	Matrix4 invViewProj = (projMatrix * viewMatrix).Inverse();
+	glUniformMatrix4fv(glGetUniformLocation(pointLightShader->GetProgram(),
+		"inverseProjView"), 1, false, invViewProj.values);
+	UpdateShaderMatrices();
+	for (int i = 0; i < LIGHT_NUM; ++i) {
+		Light& l = pointLights[i];
+		SetShaderLight(l);
+		sphere->Draw();
+	}
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glCullFace(GL_BACK);
+	glDepthFunc(GL_LEQUAL);
+
+	glDepthMask(GL_TRUE);
+
+	glClearColor(0.2f, 0.2f, 0.2f, 1);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Renderer::MoveLight(Vector3 position, Vector4 colour)

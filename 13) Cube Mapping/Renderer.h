@@ -19,6 +19,7 @@ protected:
 	Shader* lightShader;
 	Shader* reflectShader;
 	Shader* skyboxShader;
+	Shader* bumpShader;
 	
 	HeightMap* heightMap;
 	Mesh* quad;

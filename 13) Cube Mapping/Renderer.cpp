@@ -35,10 +35,12 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	reflectShader = new Shader("reflectVertex.glsl", "reflectFragment.glsl");
 	skyboxShader =  new Shader("skyboxVertex.glsl", "skyboxFragment.glsl");
 	lightShader =   new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
+	bumpShader = new Shader("bumpVertex.glsl", "bumpFragment.glsl");
 
 	if (!reflectShader->LoadSuccess() ||
 		!skyboxShader->LoadSuccess() ||
-		!lightShader->LoadSuccess()) {
+		!lightShader->LoadSuccess() ||
+		!bumpShader->LoadSuccess()) {
 		return;
 	}
 

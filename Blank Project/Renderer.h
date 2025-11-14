@@ -15,13 +15,14 @@ public:
 	~Renderer(void);
 	void RenderScene() override;
 	void UpdateScene(float dt) override;
-	void toggleCamera() { isCameraFree != isCameraFree; }
+	void toggleCamera() { isCameraFree = !isCameraFree; }
 
 protected:
 	void DrawHeightMap();
 	void DrawWater(float transparancy);
 	void DrawSkybox();
 	void DrawAnimations();
+	void DrawShadowScene(Light* l);
 	void checkMeshes();
 	void checkTextures();
 	void checkShaders();
@@ -31,15 +32,23 @@ protected:
 	void checkAnimation();
 	void checkModelMatrial();
 	void checkCurrentCamera();
+	void GenerateScreenTexture(GLuint &into, bool depth = false);
+	void fillBuffers();
+	void combineBuffers();
+	void createPointLights();
 	void Renderer::MoveLight(Vector3 position, Vector4 colour);
 	bool isCameraFree;
 	HeightMap* heightMap;
-	Shader* shader;
 	Shader* reflectShader;
 	Shader* skyboxShader;
 	Shader* lightShader;
 	Shader* characterShader;
+	Shader* shadowShader;
+	Shader* sceneShader;
+	Shader* pointLightShader;
+	Shader* combineShader;
 	Light* light;
+	Light* pointLights;
 	Camera* activeCamera;
 	Camera* freeCamera;
 	Mesh* quad;
@@ -53,6 +62,15 @@ protected:
 	GLuint waterTex;
 	GLuint cubeMap;
 	GLuint terrainBump;
+	GLuint shadowTex;
+	GLuint shadowFBO;
+	GLuint bufferFBO;
+	GLuint pointLightFBO;
+	GLuint bufferColourTex;
+	GLuint bufferNormalTex;
+	GLuint bufferDepthTex;
+	GLuint lightDiffuseTex;
+	GLuint lightSpecularTex;
 	Matrix4 soldierModel;
 	Vector3 soldierPos;
 	Matrix4 TreeModel;
