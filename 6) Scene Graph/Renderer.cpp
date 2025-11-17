@@ -32,7 +32,8 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent)
 		//std::cout << robots[i] << "\n";
 	}
 
-	root->SetModelScale(Vector3(root->GetModelScale().x * 10, root->GetModelScale().y * 10, root->GetModelScale().z * 10));
+	root->SetModelScale(Vector3(root->GetModelScale().x * 10, root->GetModelScale().y * 10, 
+		root->GetModelScale().z * 10));
 
 	//root->AddChild(new CubeRobot(cube));
 
@@ -70,14 +71,16 @@ void Renderer::DrawNode(SceneNode* n)
 {
 	if (n->GetMesh()) {
 		Matrix4 model = n->GetWorldTransform() * Matrix4::Scale(n->GetModelScale());
-		glUniformMatrix4fv(glGetUniformLocation(shader->GetProgram(), "modelMatrix"), 1, false, model.values);
-		glUniform4fv(glGetUniformLocation(shader->GetProgram(), "nodeColour"), 1, (float*)&n->GetColour());
+		glUniformMatrix4fv(glGetUniformLocation(shader->GetProgram(), "modelMatrix"), 
+			1, false, model.values);
+		glUniform4fv(glGetUniformLocation(shader->GetProgram(), "nodeColour"), 1, 
+			(float*)&n->GetColour());
 		glUniform1i(glGetUniformLocation(shader -> GetProgram(), "useTexture"), 0);
 		n->Draw(*this);
 	}
 
-	for (vector<SceneNode*>::const_iterator i = n->GetChildIteratorStart(); i != n->GetChildIteratorEnd(); ++i) {
+	for (vector<SceneNode*>::const_iterator i = n->GetChildIteratorStart(); 
+		i != n->GetChildIteratorEnd(); ++i) {
 		DrawNode(*i);
 	}
 }
-

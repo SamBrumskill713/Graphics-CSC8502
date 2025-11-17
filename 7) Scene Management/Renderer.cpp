@@ -97,7 +97,7 @@ void Renderer::DrawNode(SceneNode* n) {
 		glUniformMatrix4fv(glGetUniformLocation(shader->GetProgram(), "modelMatrix"), 1, false, model.values);
 		glUniform4fv(glGetUniformLocation(shader->GetProgram(),"nodeColour"), 1, (float*)&n->GetColour());
 
-		texture = n->GetTexture();
+		texture = n->GetTexture(0);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glUniform1i(glGetUniformLocation(shader->GetProgram(), "useTexture"), texture);

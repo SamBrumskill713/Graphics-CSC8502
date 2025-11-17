@@ -4,10 +4,10 @@
 #include "../nclgl/HeightMap.h"
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
-	heightMap = new HeightMap(TEXTUREDIR"noise.png");
-	texture = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG", 
+	heightMap = new HeightMap(TEXTUREDIR"swampHeightmap.png");
+	texture = SOIL_load_OGL_texture(TEXTUREDIR"Swampland.jpg", 
 		SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	bumpmap = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG", 
+	bumpmap = SOIL_load_OGL_texture(TEXTUREDIR"SwamplandDOT3.jpg", 
 		SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
 	//shader = new Shader("PerPixelVertex.glsl", "PerPixelFragment.glsl");
@@ -59,6 +59,7 @@ void Renderer::RenderScene() {
 
 	glUniform3fv(glGetUniformLocation(shader->GetProgram(), "cameraPos"), 1, 
 		(float*)&camera->GetPosition());
+
 	UpdateShaderMatrices();
 	SetShaderLight(*light);
 

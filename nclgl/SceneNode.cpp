@@ -1,6 +1,6 @@
 #include "SceneNode.h"
 
-SceneNode::SceneNode(Mesh* m, Vector4 colour, Shader* s)
+SceneNode::SceneNode(Mesh* m, Vector4 colour)
 {
 	this->mesh = m;
 	this->colour = colour;

@@ -6,11 +6,15 @@
 #include "../nclgl/MeshAnimation.h"
 #include "../nclgl/MeshMaterial.h"
 #include "../nclgl/Matrix4.h"
+#include "../nclgl/SceneNode.h"
+#include "../nclgl/Frustrum.h"
 #include <iostream>
 #include <vector>
 
 #define SHADOWSIZE 2048
 const int LIGHT_NUM = 2;
+const int UFO_NUM = 4;
+const int TREE_NUM = 4;
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	checkMeshes();
@@ -66,21 +70,18 @@ void Renderer::UpdateScene(float dt) {
 		currentFrame = (currentFrame + 1) % soldierAnimation->GetFrameCount();
 		frameTime += 1.0f / soldierAnimation->GetFrameRate();
 	}
-	MoveLight(light->GetPosition(), light->GetColour());
 	checkCurrentCamera();
 }
 
 void Renderer::RenderScene() {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	viewMatrix = activeCamera->BuildViewMatrix();
+	projMatrix = Matrix4::Perspective(1.0f, 10000.0f,
+		(float)width / (float)height, 45.0f);
 	//DrawShadowScene(light);
 	//fillBuffers();
 	//createPointLights();
-	DrawSkybox();
 	//combineBuffers();
-	viewMatrix = activeCamera->BuildViewMatrix();
-	projMatrix = Matrix4::Perspective(1.0f, 10000.0f,
-		(float)width / (float)height,
-		45.0f);
 	DrawSkybox();
 	DrawHeightMap();
 	DrawWater(0.1f);
@@ -129,7 +130,7 @@ void Renderer::DrawSkybox()
 	UpdateShaderMatrices();
 
 	quad->Draw();
-
+	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
 }
 
@@ -144,7 +145,7 @@ void Renderer::DrawHeightMap()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, terrainTex);
 
-	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "bumpTex"), 1);
+	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "bumpTex"), 1);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, terrainBump);
 
@@ -152,7 +153,7 @@ void Renderer::DrawHeightMap()
 	textureMatrix.ToIdentity();
 
 	UpdateShaderMatrices();
-
+	//SetShaderLight(*light);
 	heightMap->Draw();
 }
 
@@ -182,6 +183,28 @@ void Renderer::checkTextures()
 		GLuint texID = SOIL_load_OGL_texture(path.c_str(),
 			SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
 		soldierMatTextures.emplace_back(texID);
+	}
+
+	for (int i = 0; i < Tree->GetSubMeshCount(); ++i) {
+		const MeshMaterialEntry* matEntry = TreeMaterial->GetMaterialForLayer(i);
+
+		const string* filename = nullptr;
+		matEntry->GetEntry("Diffuse", &filename);
+		string path = TEXTUREDIR + *filename;
+		GLuint texID = SOIL_load_OGL_texture(path.c_str(),
+			SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
+		TreeMatTextures.emplace_back(texID);
+	}
+
+	for (int i = 0; i < UFO->GetSubMeshCount(); ++i) {
+		const MeshMaterialEntry* matEntry = UFOMaterial->GetMaterialForLayer(i);
+
+		const string* filename = nullptr;
+		matEntry->GetEntry("Diffuse", &filename);
+		string path = TEXTUREDIR + *filename;
+		GLuint texID = SOIL_load_OGL_texture(path.c_str(),
+			SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
+		UFOMatTextures.emplace_back(texID);
 	}
 
 	if (!terrainTex || !waterTex || !terrainBump || !cubeMap) {
@@ -284,22 +307,60 @@ void Renderer::setVariables()
 	soldierPos = Vector3(heightmapSize.x / 2, heightmapSize.y, heightmapSize.z/2);
 	soldierModel = Matrix4::Translation(soldierPos) * 
 		Matrix4::Scale(Vector3(100, 100, 100));
-	for (int i = 0; i < LIGHT_NUM; ++i) {
-		Light& l = pointLights[i];
-		l.SetPosition(Vector3(rand() % (int)heightmapSize.x, 150.0f,
-			rand() % (int)heightmapSize.z));
-
-		l.SetColour(Vector4(0.5f + (float)(rand() / (float)RAND_MAX),
-			0.5f + (float)(rand() / (float)RAND_MAX),
-			0.5f + (float)(rand() / (float)RAND_MAX),
-			1));
-
-		l.SetRadius(250.0f + (rand() % 250));
-	}
+	pointLights = new Light[LIGHT_NUM];
+	Light& l = pointLights[0];
+	l.SetPosition(Vector3(heightmapSize.x / 2, 3000.0f, heightmapSize.z / 2));
+	l.SetColour(Vector4(0.95f, 0.9f, 0.85f, 1));
+	l.SetRadius(7000.0f);
 	waterRotate = 0.0f;
 	waterCycle = 0.0f;
 	currentFrame = 0;
 	frameTime = 0.0f;
+}
+
+void Renderer::setNodes() {
+	SceneNode* heightmapNode = new SceneNode(heightMap);
+	heightmapNode->SetTexture(terrainTex);
+	heightmapNode->SetBumpMap(terrainBump);
+	landMapRoot->AddChild(heightmapNode);
+
+	SceneNode* waterNode = new SceneNode(quad);
+	waterNode->SetTexture(waterTex);
+	waterNode->SetShader(reflectShader);
+	heightmapNode->AddChild(waterNode);
+
+	SceneNode* soldierNode = new SceneNode(soldier);
+	soldierNode->SetTransform(soldierModel);
+	soldierNode->SetModelScale(Vector3());
+	soldierNode->SetShader(characterShader);
+	heightmapNode->AddChild(soldierNode);
+
+	SceneNode* TreeNode = new SceneNode(Tree);
+	TreeNode->SetTransform();
+	TreeNode->SetModelScale();
+	heightmapNode->AddChild(TreeNode);
+
+	SceneNode* UFONode = new SceneNode(UFO);
+	UFONode->SetTransform();
+	UFONode->SetModelScale();
+	heightmapNode->AddChild(UFONode);
+	UFOLightRoot->AddChild(UFONode);
+}
+
+void Renderer::buildNodeList()
+{
+}
+
+void Renderer::sortNodeList()
+{
+}
+
+void Renderer::drawNodes()
+{
+}
+
+void Renderer::drawNode()
+{
 }
 
 void Renderer::checkMeshes() {
@@ -307,6 +368,8 @@ void Renderer::checkMeshes() {
 	heightMap = new HeightMap(TEXTUREDIR"swampHeightmap.png");
 	soldier = Mesh::LoadFromMeshFile("Role_T.msh");
 	sphere = Mesh::LoadFromMeshFile("Sphere.msh");
+	Tree = Mesh::LoadFromMeshFile("DeadTree_1.msh");
+	UFO = Mesh::LoadFromMeshFile("UFO.msh");
 	if (heightMap == nullptr) {
 		std::cout << "No model found";
 		return;
@@ -315,6 +378,8 @@ void Renderer::checkMeshes() {
 
 void Renderer::checkModelMatrial() {
 	soldierMaterial = new MeshMaterial("Role_T.mat");
+	TreeMaterial = new MeshMaterial("DeadTree_1.mat");
+	UFOMaterial = new MeshMaterial("UFO.mat");
 	if (soldierMaterial == nullptr) {
 		std::cout << "No material found \n";
 		return;
@@ -432,7 +497,8 @@ void Renderer::fillBuffers()
 
 	UpdateShaderMatrices();
 
-	heightMap->Draw();
+	DrawHeightMap();
+	DrawWater(0.1f);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -454,6 +520,8 @@ void Renderer::combineBuffers()
 	glUniform1i(glGetUniformLocation(combineShader->GetProgram(), "specularLights"), 2);
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, lightSpecularTex);
+
+	DrawSkybox();
 
 	quad->Draw();
 	glClear(GL_DEPTH_BUFFER_BIT);
@@ -504,28 +572,4 @@ void Renderer::createPointLights()
 	glClearColor(0.2f, 0.2f, 0.2f, 1);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
-void Renderer::MoveLight(Vector3 position, Vector4 colour)
-{
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_J)) {
-		position.x -= 1.0f;
-	}
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_L)) {
-		position.x += 1.0f;
-	}
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_I)) {
-		position.z -= 1.0f;
-	}
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_K)) {
-		position.z += 1.0f;
-	}
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_LEFT)) {
-		colour.x -= 1.0f;
-	}
-	if (Window::GetKeyboard()->KeyDown(KEYBOARD_RIGHT)) {
-		colour.x += 1.0f;
-	}
-	light->SetPosition(position);
-	light->SetColour(colour);
 }

@@ -7,8 +7,7 @@
 
 class SceneNode {
 public:
-	SceneNode(Mesh* m = nullptr, Vector4 colour = Vector4(1, 1, 1, 1), 
-		Shader* s = nullptr);
+	SceneNode(Mesh* m = nullptr, Vector4 colour = Vector4(1, 1, 1, 1));
 	~SceneNode(void);
 
 	void SetTransform(const Matrix4& matrix) { transform = matrix; }
@@ -42,8 +41,17 @@ public:
 	float GetCameraDistance() const { return distanceFromCamera; }
 	void SetCameraDistance(float f) { distanceFromCamera = f; }
 
-	void SetTexture(GLuint tex) { texture = tex; }
-	GLuint GetTexture() const { return texture; }
+	void SetTexture(GLuint tex) { textures.emplace_back(tex); }
+	GLuint GetTexture(int i) const { return textures[i]; }
+
+	void SetBumpMap(GLuint bump) { bumpMaps.emplace_back(bump); }
+	GLuint GetBumpMap(int i) const { return bumpMaps[i]; }
+
+	void SetMatTextures(GLuint tex) { matTextures.emplace_back(tex); }
+	GLuint GetMatTexture(int i) const { return matTextures[i]; }
+
+	void SetShader(Shader* s) { shader = s; }
+	Shader* GetShader() const { return shader; }
 
 	static bool CompareByCameraDistance(SceneNode* a, SceneNode* b) {
 		return (a->distanceFromCamera < b->distanceFromCamera) ? true : false;
@@ -59,7 +67,11 @@ protected:
 	Vector3 modelScale;
 	Vector4 colour;
 	std::vector<SceneNode*> children;
+	std::vector<GLuint> textures;
+	std::vector<GLuint> bumpMaps;
+	std::vector<GLuint> matTextures;
 	float distanceFromCamera;
 	float boundingRadius;
 	GLuint texture;
+	GLuint bumpMap;
 };

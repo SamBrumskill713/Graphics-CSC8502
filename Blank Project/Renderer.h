@@ -8,6 +8,8 @@ class Light;
 class MeshAnimation;
 class MeshMaterial;
 class Matrix4;
+class SceneNode;
+class Frustrum;
 
 class Renderer : public OGLRenderer {
 public:
@@ -29,6 +31,11 @@ protected:
 	void checkBuffers();
 	void setCameraNodes();
 	void setVariables();
+	void setNodes();
+	void buildNodeList();
+	void sortNodeList();
+	void drawNodes();
+	void drawNode();
 	void checkAnimation();
 	void checkModelMatrial();
 	void checkCurrentCamera();
@@ -36,7 +43,6 @@ protected:
 	void fillBuffers();
 	void combineBuffers();
 	void createPointLights();
-	void Renderer::MoveLight(Vector3 position, Vector4 colour);
 	bool isCameraFree;
 	HeightMap* heightMap;
 	Shader* reflectShader;
@@ -47,6 +53,7 @@ protected:
 	Shader* sceneShader;
 	Shader* pointLightShader;
 	Shader* combineShader;
+	Shader* gbufferCharacterShader;
 	Light* light;
 	Light* pointLights;
 	Camera* activeCamera;
@@ -55,9 +62,16 @@ protected:
 	Mesh* sphere;
 	Mesh* Tree;
 	Mesh* soldier;
+	Mesh* UFO;
+	SceneNode* landMapRoot;
+	SceneNode* UFOLightRoot;
 	MeshAnimation* soldierAnimation;	
 	MeshMaterial* soldierMaterial;
+	MeshMaterial* TreeMaterial;
+	MeshMaterial* UFOMaterial;
 	vector<GLuint> soldierMatTextures;
+	vector<GLuint> treeMatTextures;
+	vector<GLuint> UFOMatTextures;
 	GLuint terrainTex;
 	GLuint waterTex;
 	GLuint cubeMap;
@@ -75,6 +89,8 @@ protected:
 	Vector3 soldierPos;
 	Matrix4 TreeModel;
 	Vector3 TreePos;
+	Matrix4 UFOModel;
+	Vector3 UFOPos;
 	float waterRotate;
 	float waterCycle;
 	int currentFrame;
