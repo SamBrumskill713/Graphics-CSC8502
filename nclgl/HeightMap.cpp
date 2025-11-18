@@ -53,4 +53,39 @@ HeightMap::HeightMap(const std::string& name)
 	heightmapSize.x = vertexScale.x * (iWidth - 1);
 	heightmapSize.y = vertexScale.y * 255.0f;
 	heightmapSize.z = vertexScale.z * (iHeight - 1);
+	width = iWidth;
+	height = iHeight;
+}
+
+float HeightMap::GetHeightAt(float worldX, float worldZ) const
+{
+	// Convert world coords to heightmap grid coords
+	// Heightmap uses vertexScale.x and vertexScale.z for spacing.
+	float gridX = worldX / 16.0f;   // vertexScale.x
+	float gridZ = worldZ / 16.0f;   // vertexScale.z
+
+	// Compute integer cell position
+	int xInt = (int)floor(gridX);
+	int zInt = (int)floor(gridZ);
+
+	// Clamp / boundary check
+	if (xInt < 0 || zInt < 0) return 0.0f;
+	if (xInt >= width - 1 || zInt >= height - 1) return 0.0f;
+
+	// Compute interpolation fractions inside the cell
+	float fracX = gridX - xInt;
+	float fracZ = gridZ - zInt;
+
+	// Lookup heightmap height values (raw image byte was stored in Y)
+	float h00 = vertices[(zInt * width) + xInt].y;
+	float h10 = vertices[(zInt * width) + (xInt + 1)].y;
+	float h01 = vertices[((zInt + 1) * width) + xInt].y;
+	float h11 = vertices[((zInt + 1) * width) + (xInt + 1)].y;
+
+	// Bilinear interpolation
+	float h0 = (h10 - h00) * fracX + h00;
+	float h1 = (h11 - h01) * fracX + h01;
+	float h = (h1 - h0) * fracZ + h0;
+
+	return h;
 }

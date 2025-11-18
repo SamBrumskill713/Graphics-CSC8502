@@ -15,7 +15,7 @@
 #define SHADOWSIZE 2048
 const int UFO_NUM = 4;
 const int LIGHT_NUM = (UFO_NUM * 3) + 2;
-const int TREE_NUM = 20;
+const int TREE_NUM = 50;
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	checkMeshes();
@@ -338,7 +338,8 @@ void Renderer::setVariables()
 	light = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f),
 		Vector4(1, 1, 1, 1), heightmapSize.x);
 	pointLights = new Light[LIGHT_NUM];
-	soldierPos = Vector3(heightmapSize.x / 2, heightmapSize.y, heightmapSize.z/2);
+	soldierPos = Vector3(heightmapSize.x / 2, 
+		heightMap->GetHeightAt(heightmapSize.x/2, heightmapSize.z/2), heightmapSize.z / 2);
 	soldierModel = Matrix4::Translation(soldierPos) * 
 		Matrix4::Scale(Vector3(100, 100, 100));
 	TreePos = Vector3(rand() % (int)heightmapSize.x, 0, rand() % (int)heightmapSize.z);
@@ -374,8 +375,8 @@ void Renderer::setNodes() {
 		SceneNode* TreeNode = new SceneNode(Tree);
 		int randomX = rand() / (RAND_MAX / 8176);
 		int randomZ = rand() / (RAND_MAX / 8176);
-		TreeNode->SetTransform(Matrix4::Translation(Vector3(randomX, heightmapSize.y,
-			randomZ)));
+		TreeNode->SetTransform(Matrix4::Translation(Vector3(randomX, 
+			heightMap->GetHeightAt(randomX, randomZ), randomZ)));
 		TreeNode->SetMatTextures(TreeMatTextures);
 		TreeNode->SetModelScale(Vector3(20.0f, 20.0f, 20.0f));
 		heightmapNode->AddChild(TreeNode);
@@ -608,10 +609,10 @@ void Renderer::fillBuffers()
 
 	modelMatrix.ToIdentity();
 	viewMatrix = activeCamera->BuildViewMatrix();
-	projMatrix = Matrix4::Perspective(1.0f, 10000.0f, (float)width / (float)height, 45.0f);
+	projMatrix = Matrix4::Perspective(1.0f, 10000.0f, (float)width / (float)height, 
+		45.0f);
 
 	UpdateShaderMatrices();
-
 	DrawHeightMap();
 	DrawWater(0.1f);
 	DrawAnimations();
