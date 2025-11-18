@@ -10,11 +10,12 @@
 #include "../nclgl/Frustrum.h"
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 #define SHADOWSIZE 2048
-const int LIGHT_NUM = 2;
 const int UFO_NUM = 4;
-const int TREE_NUM = 4;
+const int LIGHT_NUM = (UFO_NUM * 3) + 2;
+const int TREE_NUM = 20;
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	checkMeshes();
@@ -49,6 +50,19 @@ Renderer::~Renderer(void) {
 	delete soldierAnimation;
 	delete soldierMaterial;
 	delete shadowShader;
+	delete sceneShader;
+	delete pointLightShader;
+	delete combineShader;
+	delete quad;
+	delete sphere;
+	delete[] pointLights;
+	delete landMapRoot;
+	delete Tree;
+	delete TreeMaterial;
+	delete UFOBody;
+	delete UFOCockpit;
+	delete UFOBodyMaterial;
+	delete UFOCockpitMaterial;
 	glDeleteTextures(1, &bufferColourTex);
 	glDeleteTextures(1, &bufferNormalTex);
 	glDeleteTextures(1, &bufferDepthTex);
@@ -63,6 +77,10 @@ Renderer::~Renderer(void) {
 void Renderer::UpdateScene(float dt) {
 	activeCamera->UpdateCamera(dt);
 	viewMatrix = activeCamera->BuildViewMatrix();
+	projMatrix = Matrix4::Perspective(1.0f, 10000.0f,
+		(float)width / (float)height, 45.0f);
+	frameFrustrum.FromMatrix(projMatrix * viewMatrix);
+	landMapRoot->Update(dt);
 	waterRotate += dt;
 	waterCycle += dt;
 	frameTime -= dt;
@@ -74,18 +92,22 @@ void Renderer::UpdateScene(float dt) {
 }
 
 void Renderer::RenderScene() {
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	modelMatrix.ToIdentity();
 	viewMatrix = activeCamera->BuildViewMatrix();
-	projMatrix = Matrix4::Perspective(1.0f, 10000.0f,
-		(float)width / (float)height, 45.0f);
+	frameFrustrum.FromMatrix(projMatrix * viewMatrix);
+	buildNodeLists(landMapRoot);
+	sortNodeList();
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	//DrawShadowScene(light);
 	//fillBuffers();
 	//createPointLights();
 	//combineBuffers();
 	DrawSkybox();
+	drawNodes();
 	DrawHeightMap();
 	DrawWater(0.1f);
 	DrawAnimations();
+	clearNodeLists();
 }
 
 void Renderer::DrawWater(float transparancy)
@@ -196,15 +218,26 @@ void Renderer::checkTextures()
 		TreeMatTextures.emplace_back(texID);
 	}
 
-	for (int i = 0; i < UFO->GetSubMeshCount(); ++i) {
-		const MeshMaterialEntry* matEntry = UFOMaterial->GetMaterialForLayer(i);
+	for (int i = 0; i < UFOBody->GetSubMeshCount(); ++i) {
+		const MeshMaterialEntry* matEntry = UFOBodyMaterial->GetMaterialForLayer(i);
 
 		const string* filename = nullptr;
 		matEntry->GetEntry("Diffuse", &filename);
 		string path = TEXTUREDIR + *filename;
 		GLuint texID = SOIL_load_OGL_texture(path.c_str(),
 			SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
-		UFOMatTextures.emplace_back(texID);
+		UFOBodyMatTextures.emplace_back(texID);
+	}
+
+	for (int i = 0; i < UFOCockpit->GetSubMeshCount(); ++i) {
+		const MeshMaterialEntry* matEntry = UFOCockpitMaterial->GetMaterialForLayer(i);
+
+		const string* filename = nullptr;
+		matEntry->GetEntry("Diffuse", &filename);
+		string path = TEXTUREDIR + *filename;
+		GLuint texID = SOIL_load_OGL_texture(path.c_str(),
+			SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
+		UFOCockpitMatTextures.emplace_back(texID);
 	}
 
 	if (!terrainTex || !waterTex || !terrainBump || !cubeMap) {
@@ -225,6 +258,7 @@ void Renderer::checkShaders()
 	characterShader = new Shader("SkinningVertex.glsl", "texturedfragment.glsl");
 	shadowShader = new Shader("shadowVertex.glsl", "shadowFragment.glsl");
 	sceneShader = new Shader("BumpVertex.glsl", "bufferFragment.glsl");
+	nodeShader = new Shader("SceneVertex.glsl", "SceneFragment.glsl");
 	pointLightShader = new Shader("pointlightvert.glsl", "pointLightFrag.glsl");
 	combineShader = new Shader("combineVert.glsl", "combineFrag.glsl");
 
@@ -307,11 +341,22 @@ void Renderer::setVariables()
 	soldierPos = Vector3(heightmapSize.x / 2, heightmapSize.y, heightmapSize.z/2);
 	soldierModel = Matrix4::Translation(soldierPos) * 
 		Matrix4::Scale(Vector3(100, 100, 100));
+	TreePos = Vector3(rand() % (int)heightmapSize.x, 0, rand() % (int)heightmapSize.z);
+	TreeModel = Matrix4::Translation(TreePos) *
+		Matrix4::Scale(Vector3(50, 50, 50));
+	UFOBodyPos = Vector3(heightmapSize.x / 2, heightmapSize.y, heightmapSize.z / 2);
+	UFOBodyModel = Matrix4::Translation(UFOBodyPos) *
+		Matrix4::Scale(Vector3(20, 20, 20));
+	UFOCockpitPos = Vector3(UFOBodyPos.x, UFOBodyPos.y + 50, UFOBodyPos.z);
+	UFOCockpitModel = Matrix4::Translation(UFOCockpitPos) *
+		Matrix4::Scale(Vector3(20, 20, 20));
 	pointLights = new Light[LIGHT_NUM];
 	Light& l = pointLights[0];
 	l.SetPosition(Vector3(heightmapSize.x / 2, 3000.0f, heightmapSize.z / 2));
 	l.SetColour(Vector4(0.95f, 0.9f, 0.85f, 1));
 	l.SetRadius(7000.0f);
+	landMapRoot = new SceneNode(nullptr);
+	setNodes();
 	waterRotate = 0.0f;
 	waterCycle = 0.0f;
 	currentFrame = 0;
@@ -319,48 +364,114 @@ void Renderer::setVariables()
 }
 
 void Renderer::setNodes() {
+	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 	SceneNode* heightmapNode = new SceneNode(heightMap);
 	heightmapNode->SetTexture(terrainTex);
 	heightmapNode->SetBumpMap(terrainBump);
 	landMapRoot->AddChild(heightmapNode);
 
-	SceneNode* waterNode = new SceneNode(quad);
-	waterNode->SetTexture(waterTex);
-	waterNode->SetShader(reflectShader);
-	heightmapNode->AddChild(waterNode);
+	for (int i = 0; i < TREE_NUM; ++i) {
+		SceneNode* TreeNode = new SceneNode(Tree);
+		int randomX = rand() / (RAND_MAX / 8176);
+		int randomZ = rand() / (RAND_MAX / 8176);
+		TreeNode->SetTransform(Matrix4::Translation(Vector3(randomX, heightmapSize.y,
+			randomZ)));
+		TreeNode->SetMatTextures(TreeMatTextures);
+		TreeNode->SetModelScale(Vector3(20.0f, 20.0f, 20.0f));
+		heightmapNode->AddChild(TreeNode);
+	}
 
-	SceneNode* soldierNode = new SceneNode(soldier);
-	soldierNode->SetTransform(soldierModel);
-	soldierNode->SetModelScale(Vector3());
-	soldierNode->SetShader(characterShader);
-	heightmapNode->AddChild(soldierNode);
+	SceneNode* UFOBodyNode = new SceneNode(UFOBody);
+	UFOBodyNode->SetTransform(UFOBodyModel);
+	UFOBodyNode->SetMatTextures(UFOBodyMatTextures);
+	//UFONode->SetModelScale();
+	heightmapNode->AddChild(UFOBodyNode);
 
-	SceneNode* TreeNode = new SceneNode(Tree);
-	TreeNode->SetTransform();
-	TreeNode->SetModelScale();
-	heightmapNode->AddChild(TreeNode);
-
-	SceneNode* UFONode = new SceneNode(UFO);
-	UFONode->SetTransform();
-	UFONode->SetModelScale();
-	heightmapNode->AddChild(UFONode);
-	UFOLightRoot->AddChild(UFONode);
+	SceneNode* UFOCockpitNode = new SceneNode(UFOCockpit);
+	UFOCockpitNode->SetTransform(UFOCockpitModel);
+	UFOCockpitNode->SetMatTextures(UFOCockpitMatTextures);
+	//UFONode->SetModelScale();
+	UFOBodyNode->AddChild(UFOCockpitNode);
 }
 
-void Renderer::buildNodeList()
+void Renderer::buildNodeLists(SceneNode* from)
 {
+	if (frameFrustrum.InsideFrustrum(*from)) {
+		Vector3 dir = from->GetWorldTransform().GetPositionVector() - 
+			activeCamera->GetPosition();
+		from->SetCameraDistance(Vector3::Dot(dir, dir));
+
+		if (from->GetColour().w < 1.0f) {
+			transparentNodeList.push_back(from);
+		}
+		else {
+			nodeList.push_back(from);
+		}
+	}
+
+	for (vector<SceneNode*>::const_iterator i = from->GetChildIteratorStart(); 
+		i != from->GetChildIteratorEnd(); ++i) {
+		buildNodeLists((*i));
+	}
 }
 
 void Renderer::sortNodeList()
 {
+	std::sort(transparentNodeList.rbegin(), transparentNodeList.rend(), 
+		SceneNode::CompareByCameraDistance);
+	std::sort(nodeList.begin(), nodeList.end(), SceneNode::CompareByCameraDistance);
 }
 
 void Renderer::drawNodes()
 {
+	BindShader(nodeShader);
+	glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), "diffuseTex"), 0);
+
+	UpdateShaderMatrices();
+
+	for (const auto& i : nodeList) {
+		drawNode(i);
+	}
+	for (const auto& i : transparentNodeList) {
+		drawNode(i);
+	}
 }
 
-void Renderer::drawNode()
+void Renderer::clearNodeLists() {
+	transparentNodeList.clear();
+	nodeList.clear();
+}
+
+void Renderer::drawNode(SceneNode* n)
 {
+	if (n->GetMesh()) {
+		Matrix4 model = n->GetWorldTransform() * Matrix4::Scale(n->GetModelScale());
+		glUniformMatrix4fv(glGetUniformLocation(nodeShader->GetProgram(),
+			"modelMatrix"), 1, false, model.values);
+		glUniform4fv(glGetUniformLocation(nodeShader->GetProgram(),
+			"nodeColour"), 1, (float*)&n->GetColour());
+
+		if (n->GetMesh()->GetSubMeshCount() == 1) {
+			GLuint texture = n->GetTexture(); 
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), "useTexture"),
+				texture);
+
+			n->Draw(*this);
+		}
+		else {
+			for (int i = 0; i < n->GetMesh()->GetSubMeshCount(); ++i) {
+				GLuint texture = n->GetMatTexture(i);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, texture);
+				glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), "useTexture"),
+					texture);
+
+				n->GetMesh()->DrawSubMesh(i);
+			}
+		}
+	}
 }
 
 void Renderer::checkMeshes() {
@@ -369,7 +480,8 @@ void Renderer::checkMeshes() {
 	soldier = Mesh::LoadFromMeshFile("Role_T.msh");
 	sphere = Mesh::LoadFromMeshFile("Sphere.msh");
 	Tree = Mesh::LoadFromMeshFile("DeadTree_1.msh");
-	UFO = Mesh::LoadFromMeshFile("UFO.msh");
+	UFOBody = Mesh::LoadFromMeshFile("UFO_body.msh");
+	UFOCockpit = Mesh::LoadFromMeshFile("UFO_cockpit.msh");
 	if (heightMap == nullptr) {
 		std::cout << "No model found";
 		return;
@@ -379,8 +491,11 @@ void Renderer::checkMeshes() {
 void Renderer::checkModelMatrial() {
 	soldierMaterial = new MeshMaterial("Role_T.mat");
 	TreeMaterial = new MeshMaterial("DeadTree_1.mat");
-	UFOMaterial = new MeshMaterial("UFO.mat");
-	if (soldierMaterial == nullptr) {
+	UFOBodyMaterial = new MeshMaterial("UFO_body.mat");
+	UFOCockpitMaterial = new MeshMaterial("UFO_cockpit.mat");
+	if (soldierMaterial == nullptr || TreeMaterial == nullptr 
+		|| UFOMaterial == nullptr || UFOBodyMaterial == nullptr 
+		|| UFOCockpitMaterial == nullptr) {
 		std::cout << "No material found \n";
 		return;
 	}
@@ -499,6 +614,7 @@ void Renderer::fillBuffers()
 
 	DrawHeightMap();
 	DrawWater(0.1f);
+	DrawAnimations();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }

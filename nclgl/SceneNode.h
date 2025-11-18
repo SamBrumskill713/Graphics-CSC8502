@@ -41,13 +41,14 @@ public:
 	float GetCameraDistance() const { return distanceFromCamera; }
 	void SetCameraDistance(float f) { distanceFromCamera = f; }
 
-	void SetTexture(GLuint tex) { textures.emplace_back(tex); }
-	GLuint GetTexture(int i) const { return textures[i]; }
+	void SetTexture(GLuint tex) { texture = tex; }
+	GLuint GetTexture() const { return texture; }
 
-	void SetBumpMap(GLuint bump) { bumpMaps.emplace_back(bump); }
-	GLuint GetBumpMap(int i) const { return bumpMaps[i]; }
+	void SetBumpMap(GLuint bump) { bumpMap = bump; }
+	GLuint GetBumpMap() const { bumpMap; }
 
-	void SetMatTextures(GLuint tex) { matTextures.emplace_back(tex); }
+	void AddMatTexture(GLuint tex) { matTextures.emplace_back(tex); }
+	void SetMatTextures(std::vector<GLuint> tex) { matTextures = tex; }
 	GLuint GetMatTexture(int i) const { return matTextures[i]; }
 
 	void SetShader(Shader* s) { shader = s; }

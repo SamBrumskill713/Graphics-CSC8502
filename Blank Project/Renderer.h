@@ -1,5 +1,6 @@
 #pragma once
 #include "../nclgl/OGLRenderer.h"
+#include "../nclgl/Frustrum.h"
 #include <vector>
 class HeightMap;
 class Camera;
@@ -9,7 +10,6 @@ class MeshAnimation;
 class MeshMaterial;
 class Matrix4;
 class SceneNode;
-class Frustrum;
 
 class Renderer : public OGLRenderer {
 public:
@@ -32,10 +32,11 @@ protected:
 	void setCameraNodes();
 	void setVariables();
 	void setNodes();
-	void buildNodeList();
+	void buildNodeLists(SceneNode* from);
 	void sortNodeList();
 	void drawNodes();
-	void drawNode();
+	void drawNode(SceneNode* n);
+	void clearNodeLists();
 	void checkAnimation();
 	void checkModelMatrial();
 	void checkCurrentCamera();
@@ -53,7 +54,7 @@ protected:
 	Shader* sceneShader;
 	Shader* pointLightShader;
 	Shader* combineShader;
-	Shader* gbufferCharacterShader;
+	Shader* nodeShader;
 	Light* light;
 	Light* pointLights;
 	Camera* activeCamera;
@@ -63,15 +64,20 @@ protected:
 	Mesh* Tree;
 	Mesh* soldier;
 	Mesh* UFO;
+	Mesh* UFOBody;
+	Mesh* UFOCockpit;
 	SceneNode* landMapRoot;
-	SceneNode* UFOLightRoot;
 	MeshAnimation* soldierAnimation;	
 	MeshMaterial* soldierMaterial;
 	MeshMaterial* TreeMaterial;
 	MeshMaterial* UFOMaterial;
+	MeshMaterial* UFOBodyMaterial;
+	MeshMaterial* UFOCockpitMaterial;
 	vector<GLuint> soldierMatTextures;
-	vector<GLuint> treeMatTextures;
+	vector<GLuint> TreeMatTextures;
 	vector<GLuint> UFOMatTextures;
+	vector<GLuint> UFOBodyMatTextures;
+	vector<GLuint> UFOCockpitMatTextures;
 	GLuint terrainTex;
 	GLuint waterTex;
 	GLuint cubeMap;
@@ -89,10 +95,15 @@ protected:
 	Vector3 soldierPos;
 	Matrix4 TreeModel;
 	Vector3 TreePos;
-	Matrix4 UFOModel;
-	Vector3 UFOPos;
+	Matrix4 UFOBodyModel;
+	Vector3 UFOBodyPos;
+	Vector3 UFOCockpitPos;
+	Matrix4 UFOCockpitModel;
 	float waterRotate;
 	float waterCycle;
 	int currentFrame;
 	float frameTime;
+	Frustrum frameFrustrum;
+	vector<SceneNode*> transparentNodeList;
+	vector<SceneNode*> nodeList;
 };
