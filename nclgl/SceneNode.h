@@ -3,11 +3,14 @@
 #include "Vector3.h"
 #include "Vector4.h"
 #include "Mesh.h"
+#include "HeightMap.h"
 #include <vector>
 
 class SceneNode {
 public:
-	SceneNode(Mesh* m = nullptr, Vector4 colour = Vector4(1, 1, 1, 1));
+	SceneNode(Mesh* m = nullptr, Vector4 colour = Vector4(1, 1, 1, 1), 
+		Shader* shader = nullptr);
+	SceneNode(HeightMap* heightmap, Vector4 colour, Shader* shader = nullptr);
 	~SceneNode(void);
 
 	void SetTransform(const Matrix4& matrix) { transform = matrix; }
@@ -63,10 +66,12 @@ protected:
 	SceneNode* parent;
 	Mesh* mesh;
 	Shader* shader;
+	HeightMap* heightMap;
 	Matrix4 worldTransform;
 	Matrix4 transform;
 	Vector3 modelScale;
 	Vector4 colour;
+	bool shadow;
 	std::vector<SceneNode*> children;
 	std::vector<GLuint> textures;
 	std::vector<GLuint> bumpMaps;

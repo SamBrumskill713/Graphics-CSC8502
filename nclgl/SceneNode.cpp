@@ -1,10 +1,21 @@
 #include "SceneNode.h"
 
-SceneNode::SceneNode(Mesh* m, Vector4 colour)
+SceneNode::SceneNode(Mesh* m, Vector4 colour, Shader* shader)
 {
 	this->mesh = m;
 	this->colour = colour;
 	parent = NULL;
+	modelScale = Vector3(1, 1, 1);
+	boundingRadius = 1.0f;
+	distanceFromCamera = 0.0f;
+	texture = 0;
+}
+
+SceneNode::SceneNode(HeightMap* heightmap, Vector4 colour, Shader* shader)
+{
+	this->heightMap = heightmap;
+	this->colour = colour;
+	parent = nullptr;
 	modelScale = Vector3(1, 1, 1);
 	boundingRadius = 1.0f;
 	distanceFromCamera = 0.0f;
@@ -41,4 +52,5 @@ void SceneNode::Update(float dt)
 void SceneNode::Draw(const OGLRenderer& r)
 {
 	if (mesh) { mesh->Draw(); }
+	if (heightMap) { heightMap->Draw(); }
 }
