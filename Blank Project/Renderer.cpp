@@ -53,6 +53,7 @@ Renderer::~Renderer(void) {
 	delete sceneShader;
 	delete pointLightShader;
 	delete combineShader;
+	delete nodeShader;
 	delete quad;
 	delete sphere;
 	delete[] pointLights;
@@ -63,6 +64,17 @@ Renderer::~Renderer(void) {
 	delete UFOCockpit;
 	delete UFOBodyMaterial;
 	delete UFOCockpitMaterial;
+
+	// Delete all GL textures we created that were not previously freed
+	for (auto tex : soldierMatTextures) { glDeleteTextures(1, &tex); }
+	for (auto tex : TreeMatTextures) { glDeleteTextures(1, &tex); }
+	for (auto tex : UFOBodyMatTextures) { glDeleteTextures(1, &tex); }
+	for (auto tex : UFOCockpitMatTextures) { glDeleteTextures(1, &tex); }
+	if (terrainTex) { glDeleteTextures(1, &terrainTex); }
+	if (waterTex) { glDeleteTextures(1, &waterTex); }
+	if (terrainBump) { glDeleteTextures(1, &terrainBump); }
+	if (cubeMap) { glDeleteTextures(1, &cubeMap); }
+
 	glDeleteTextures(1, &bufferColourTex);
 	glDeleteTextures(1, &bufferNormalTex);
 	glDeleteTextures(1, &bufferDepthTex);
@@ -94,7 +106,6 @@ void Renderer::UpdateScene(float dt) {
 void Renderer::RenderScene() {
 	modelMatrix.ToIdentity();
 	viewMatrix = activeCamera->BuildViewMatrix();
-	frameFrustrum.FromMatrix(projMatrix * viewMatrix);
 	buildNodeLists(landMapRoot);
 	sortNodeList();
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -104,7 +115,7 @@ void Renderer::RenderScene() {
 	//combineBuffers();
 	DrawSkybox();
 	drawNodes();
-	DrawHeightMap();
+	//DrawHeightMap();
 	DrawWater(0.1f);
 	DrawAnimations();
 	clearNodeLists();
@@ -195,6 +206,8 @@ void Renderer::checkTextures()
 		TEXTUREDIR"top.png", TEXTUREDIR"bottom.png",
 		TEXTUREDIR"front.png", TEXTUREDIR"back.png",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
+
+	std::cout << UFOCockpit->GetSubMeshCount() << std::endl;
 
 	for (int i = 0; i < soldier->GetSubMeshCount(); ++i) {
 		const MeshMaterialEntry* matEntry = soldierMaterial->GetMaterialForLayer(i);
@@ -356,7 +369,7 @@ void Renderer::setVariables()
 	l.SetPosition(Vector3(heightmapSize.x / 2, 3000.0f, heightmapSize.z / 2));
 	l.SetColour(Vector4(0.95f, 0.9f, 0.85f, 1));
 	l.SetRadius(7000.0f);
-	landMapRoot = new SceneNode(nullptr);
+	landMapRoot = new SceneNode();
 	setNodes();
 	waterRotate = 0.0f;
 	waterCycle = 0.0f;
@@ -367,36 +380,45 @@ void Renderer::setVariables()
 void Renderer::setNodes() {
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 	SceneNode* heightmapNode = new SceneNode(heightMap);
-	heightmapNode->SetTexture(terrainTex);
-	heightmapNode->SetBumpMap(terrainBump);
+	heightmapNode->SetShader(sceneShader);
+	heightmapNode->AddTexture(terrainTex);
+	heightmapNode->AddTexture(terrainBump);
 	landMapRoot->AddChild(heightmapNode);
 
 	for (int i = 0; i < TREE_NUM; ++i) {
 		SceneNode* TreeNode = new SceneNode(Tree);
-		int randomX = rand() / (RAND_MAX / 8176);
-		int randomZ = rand() / (RAND_MAX / 8176);
-		TreeNode->SetTransform(Matrix4::Translation(Vector3(randomX, 
-			heightMap->GetHeightAt(randomX, randomZ), randomZ)));
+		TreeNode->SetShader(nodeShader);
+		int randX = rand() / (RAND_MAX / 8176);
+		int randZ = rand() / (RAND_MAX / 8176);
+		TreeNode->SetTransform(Matrix4::Translation(Vector3(randX, 
+			heightMap->GetHeightAt(randX, randZ), randZ)));
 		TreeNode->SetMatTextures(TreeMatTextures);
-		TreeNode->SetModelScale(Vector3(20.0f, 20.0f, 20.0f));
+		TreeNode->SetModelScale(Vector3(100.0f, 100.0f, 100.0f));
 		heightmapNode->AddChild(TreeNode);
 	}
 
 	SceneNode* UFOBodyNode = new SceneNode(UFOBody);
+	UFOBodyNode->SetShader(nodeShader);	
 	UFOBodyNode->SetTransform(UFOBodyModel);
 	UFOBodyNode->SetMatTextures(UFOBodyMatTextures);
-	//UFONode->SetModelScale();
+	//UFOBodyNode->SetModelScale();
 	heightmapNode->AddChild(UFOBodyNode);
 
 	SceneNode* UFOCockpitNode = new SceneNode(UFOCockpit);
+	UFOCockpitNode->SetShader(nodeShader);	
 	UFOCockpitNode->SetTransform(UFOCockpitModel);
 	UFOCockpitNode->SetMatTextures(UFOCockpitMatTextures);
-	//UFONode->SetModelScale();
+	//UFOCockpitNode->SetModelScale();
 	UFOBodyNode->AddChild(UFOCockpitNode);
 }
 
 void Renderer::buildNodeLists(SceneNode* from)
 {
+
+	Vector3 pos = from->GetWorldTransform().GetPositionVector();
+	float radius = from->GetBoundingRadius();
+
+	bool inside = frameFrustrum.InsideFrustrum(*from);
 	if (frameFrustrum.InsideFrustrum(*from)) {
 		Vector3 dir = from->GetWorldTransform().GetPositionVector() - 
 			activeCamera->GetPosition();
@@ -425,17 +447,12 @@ void Renderer::sortNodeList()
 
 void Renderer::drawNodes()
 {
-	BindShader(nodeShader);
-	glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), "diffuseTex"), 0);
-
-	UpdateShaderMatrices();
-
 	for (const auto& i : nodeList) {
 		drawNode(i);
 	}
-	for (const auto& i : transparentNodeList) {
-		drawNode(i);
-	}
+	//for (const auto& i : transparentNodeList) {
+		//drawNode(i);
+	//}
 }
 
 void Renderer::clearNodeLists() {
@@ -445,33 +462,50 @@ void Renderer::clearNodeLists() {
 
 void Renderer::drawNode(SceneNode* n)
 {
+	Shader* nodeShader = n->GetShader();
+	if (nodeShader != nullptr) {
+		BindShader(nodeShader);
+	}
+	UpdateShaderMatrices();
 	if (n->GetMesh()) {
 		Matrix4 model = n->GetWorldTransform() * Matrix4::Scale(n->GetModelScale());
-		glUniformMatrix4fv(glGetUniformLocation(nodeShader->GetProgram(),
-			"modelMatrix"), 1, false, model.values);
-		glUniform4fv(glGetUniformLocation(nodeShader->GetProgram(),
-			"nodeColour"), 1, (float*)&n->GetColour());
+		if (nodeShader) {
+			glUniformMatrix4fv(glGetUniformLocation(nodeShader->GetProgram(),
+				"modelMatrix"), 1, false, model.values);
+			glUniform4fv(glGetUniformLocation(nodeShader->GetProgram(),
+				"nodeColour"), 1, (float*)&n->GetColour());
+		}
 
-		if (n->GetMesh()->GetSubMeshCount() == 1) {
-			GLuint texture = n->GetTexture(); 
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, texture);
+		else if (n->GetMesh()->GetSubMeshCount() == 1) {
+			if(nodeShader){
+			GLuint texture = 0;
+			texture = n->GetTexture(0);
 			glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), "useTexture"),
 				texture);
-
-			n->Draw(*this);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, texture);
+			}
 		}
+
 		else {
 			for (int i = 0; i < n->GetMesh()->GetSubMeshCount(); ++i) {
-				GLuint texture = n->GetMatTexture(i);
-				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, texture);
 				glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), "useTexture"),
-					texture);
+					n->GetMatTexture(i));
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, n->GetMatTexture(i));
 
 				n->GetMesh()->DrawSubMesh(i);
 			}
 		}
+		n->Draw(*this);
+	}
+	if (n->GetHeightMap() != nullptr) {
+		if (nodeShader) {
+			BindShader(nodeShader);
+			n->setShaderTextures();
+		}
+		UpdateShaderMatrices();
+		n->Draw(*this);
 	}
 }
 
@@ -555,9 +589,8 @@ void Renderer::DrawShadowScene(Light* l)
 	modelMatrix.ToIdentity();
 	textureMatrix.ToIdentity();
 	UpdateShaderMatrices();
-	heightMap->Draw();
 
-	//DrawAnimations();
+
 
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glViewport(0, 0, width, height);

@@ -8,10 +8,12 @@
 
 class SceneNode {
 public:
-	SceneNode(Mesh* m = nullptr, Vector4 colour = Vector4(1, 1, 1, 1), 
-		Shader* shader = nullptr);
-	SceneNode(HeightMap* heightmap, Vector4 colour, Shader* shader = nullptr);
+	SceneNode();
+	SceneNode(Mesh* m, Vector4 colour = Vector4(1, 1, 1, 1));
+	SceneNode(HeightMap* heightmap, Vector4 colour = Vector4(1, 1, 1, 1));
 	~SceneNode(void);
+
+	void setShaderTextures();
 
 	void SetTransform(const Matrix4& matrix) { transform = matrix; }
 	const Matrix4& GetTransform() const { return transform; }
@@ -44,8 +46,9 @@ public:
 	float GetCameraDistance() const { return distanceFromCamera; }
 	void SetCameraDistance(float f) { distanceFromCamera = f; }
 
-	void SetTexture(GLuint tex) { texture = tex; }
-	GLuint GetTexture() const { return texture; }
+	void AddTexture(GLuint tex) { textures.emplace_back(tex); }
+	GLuint GetTexture(int i) const { return textures[i]; }
+	int getTextureSize() const { return textures.size(); }
 
 	void SetBumpMap(GLuint bump) { bumpMap = bump; }
 	GLuint GetBumpMap() const { bumpMap; }
@@ -53,9 +56,12 @@ public:
 	void AddMatTexture(GLuint tex) { matTextures.emplace_back(tex); }
 	void SetMatTextures(std::vector<GLuint> tex) { matTextures = tex; }
 	GLuint GetMatTexture(int i) const { return matTextures[i]; }
+	int getMatTextureSize() const { return matTextures.size(); }
 
 	void SetShader(Shader* s) { shader = s; }
 	Shader* GetShader() const { return shader; }
+
+	HeightMap* GetHeightMap() const { return heightMap; }
 
 	static bool CompareByCameraDistance(SceneNode* a, SceneNode* b) {
 		return (a->distanceFromCamera < b->distanceFromCamera) ? true : false;
