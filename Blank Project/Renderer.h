@@ -20,7 +20,6 @@ public:
 	void toggleCamera() { isCameraFree = !isCameraFree; }
 
 protected:
-	void DrawHeightMap();
 	void DrawWater(float transparancy);
 	void DrawSkybox();
 	void DrawAnimations();

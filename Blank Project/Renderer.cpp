@@ -14,7 +14,7 @@
 
 #define SHADOWSIZE 2048
 const int UFO_NUM = 4;
-const int LIGHT_NUM = (UFO_NUM * 3) + 2;
+const int LIGHT_NUM = 1;
 const int TREE_NUM = 50;
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
@@ -109,16 +109,12 @@ void Renderer::RenderScene() {
 	buildNodeLists(landMapRoot);
 	sortNodeList();
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-	//DrawShadowScene(light);
-	//fillBuffers();
-	//createPointLights();
-	//combineBuffers();
 	DrawSkybox();
-	drawNodes();
-	//DrawHeightMap();
-	DrawWater(0.1f);
-	DrawAnimations();
-	clearNodeLists();
+	//DrawShadowScene(light);
+	fillBuffers();
+	createPointLights();
+	combineBuffers();
+	//drawNodes();
 }
 
 void Renderer::DrawWater(float transparancy)
@@ -165,29 +161,6 @@ void Renderer::DrawSkybox()
 	quad->Draw();
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
-}
-
-void Renderer::DrawHeightMap() 
-{
-	BindShader(lightShader);
-	SetShaderLight(*light);
-	glUniform3fv(glGetUniformLocation(lightShader->GetProgram(), "cameraPos"), 1,
-		(float*)&activeCamera->GetPosition());
-
-	glUniform1i(glGetUniformLocation(lightShader->GetProgram(), "diffuseTex"), 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, terrainTex);
-
-	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "bumpTex"), 1);
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, terrainBump);
-
-	modelMatrix.ToIdentity();
-	textureMatrix.ToIdentity();
-
-	UpdateShaderMatrices();
-	//SetShaderLight(*light);
-	heightMap->Draw();
 }
 
 void Renderer::checkTextures()
@@ -646,7 +619,8 @@ void Renderer::fillBuffers()
 		45.0f);
 
 	UpdateShaderMatrices();
-	DrawHeightMap();
+	drawNodes();
+	clearNodeLists();
 	DrawWater(0.1f);
 	DrawAnimations();
 
@@ -671,10 +645,12 @@ void Renderer::combineBuffers()
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, lightSpecularTex);
 
-	DrawSkybox();
+	glUniform1i(glGetUniformLocation(combineShader->GetProgram(), "depthTex"), 3);	
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, bufferDepthTex);
 
 	quad->Draw();
-	glClear(GL_DEPTH_BUFFER_BIT);
+	/*glClear(GL_DEPTH_BUFFER_BIT);*/
 }
 
 void Renderer::createPointLights()
