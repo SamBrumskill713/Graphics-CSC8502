@@ -39,6 +39,26 @@ void main(void){
 	float rFactor = clamp(dot(halfDir, normal), 0.0, 1.0);
 	float specFactor = pow(rFactor, 60.0);
 	vec3 attenuated = lightColour.xyz * atten;
-	diffuseOutput = vec4(attenuated * lambert, 1.0);
-	specularOutput = vec4(attenuated * specFactor * 0.33, 1.0);
+
+
+	// --- Shadow lookup --------------------------------------
+	// Project world position into light clip space:
+	vec4 lightClip = shadowMatrix * vec4(worldPos, 1.0);
+	// Perspective divide
+	lightClip /= lightClip.w;
+	// Map from NDC (-1..1) to texture coords (0..1)
+	vec2 shadowUV = lightClip.xy * 0.5 + 0.5;
+	// Depth value in light space mapped to [0,1]
+	float lightSpaceDepth = lightClip.z * 0.5 + 0.5;
+	// Basic bias to reduce self-shadowing
+	float bias = 0.003;
+	// If outside [0,1] we are outside the shadow map -> treat as lit
+	float shadow = 1.0;
+	if(shadowUV.x >= 0.0 && shadowUV.x <= 1.0 && shadowUV.y >= 0.0 && shadowUV.y <= 1.0) {
+		float shadowMapDepth = texture(shadowTex, shadowUV).r;
+		// simple comparison (no PCF)
+		shadow = (shadowMapDepth + bias < lightSpaceDepth) ? 0.0 : 1.0;
+	}
+	diffuseOutput = vec4(attenuated * lambert* shadow, 1.0);
+	specularOutput = vec4(attenuated * specFactor * 0.33 *shadow, 1.0);
 }

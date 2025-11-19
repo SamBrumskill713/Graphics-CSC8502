@@ -243,7 +243,7 @@ void Renderer::checkShaders()
 	shadowShader = new Shader("shadowVertex.glsl", "shadowFragment.glsl");
 	sceneShader = new Shader("BumpVertex.glsl", "bufferFragment.glsl");
 	nodeShader = new Shader("SceneVertex.glsl", "SceneFragment.glsl");
-	pointLightShader = new Shader("pointlightvert.glsl", "pointLightFrag.glsl");
+	pointLightShader = new Shader("pointLightvert.glsl", "pointLightFrag.glsl");
 	combineShader = new Shader("combineVert.glsl", "combineFrag.glsl");
 	characterShadowShader = new Shader("shadowSkinning.glsl", "shadowFragment.glsl");
 
@@ -266,6 +266,7 @@ void Renderer::checkBuffers()
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOWSIZE,
 		SHADOWSIZE, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
@@ -338,9 +339,9 @@ void Renderer::setVariables()
 		Matrix4::Scale(Vector3(20, 20, 20));
 	pointLights = new Light[LIGHT_NUM];
 	Light& l = pointLights[0];
-	l.SetPosition(Vector3(heightmapSize.x / 2, 3000.0f, heightmapSize.z / 2));
+	l.SetPosition(Vector3(heightmapSize.x / 2, 1000.0f, heightmapSize.z / 2));
 	l.SetColour(Vector4(0.95f, 0.9f, 0.85f, 1));
-	l.SetRadius(7000.0f);
+	l.SetRadius(5000.0f);
 	landMapRoot = new SceneNode();
 	setNodes();
 	waterRotate = 0.0f;
@@ -349,6 +350,7 @@ void Renderer::setVariables()
 	frameTime = 0.0f;
 	isMainScene = true;
 	isTransScene = false;
+	//isShadow = false;
 }
 
 void Renderer::setNodes() {
@@ -469,7 +471,8 @@ void Renderer::drawNode(SceneNode* n)
 				if (nodeShader) {
 					GLuint texture = 0;
 					texture = n->GetTexture(0);
-					glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), "useTexture"),
+					glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), 
+						"useTexture"),
 						texture);
 					glActiveTexture(GL_TEXTURE0);
 					glBindTexture(GL_TEXTURE_2D, texture);
@@ -478,7 +481,8 @@ void Renderer::drawNode(SceneNode* n)
 
 			else {
 				for (int i = 0; i < n->GetMesh()->GetSubMeshCount(); ++i) {
-					glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), "useTexture"),
+					glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), 
+						"useTexture"),
 						n->GetMatTexture(i));
 					glActiveTexture(GL_TEXTURE0);
 					glBindTexture(GL_TEXTURE_2D, n->GetMatTexture(i));
@@ -536,10 +540,10 @@ void Renderer::checkAnimation() {
 
 void Renderer::DrawAnimations() {
 	if (isShadow) {
-		BindShader(characterShadowShader);
+		//BindShader(characterShadowShader);
 		modelMatrix = soldierModel;
 		UpdateShaderMatrices();
-		vector<Matrix4> frameMatrices;
+	/*	vector<Matrix4> frameMatrices;
 
 		const Matrix4* invBindPose = soldier->GetInverseBindPose();
 		const Matrix4* frameData = soldierAnimation->GetJointData(currentFrame);
@@ -548,7 +552,7 @@ void Renderer::DrawAnimations() {
 			frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
 		}
 		int j = glGetUniformLocation(characterShadowShader->GetProgram(), "joints");
-		glUniformMatrix4fv(j, frameMatrices.size(), false, (float*)frameMatrices.data());
+		glUniformMatrix4fv(j, frameMatrices.size(), false, (float*)frameMatrices.data());*/
 		for (int i = 0; i < soldier->GetSubMeshCount(); ++i) {
 			soldier->DrawSubMesh(i);
 		}
@@ -594,7 +598,7 @@ void Renderer::DrawShadowScene(Light* l)
 
 	viewMatrix = Matrix4::BuildViewMatrix(l->GetPosition(), Vector3(0, 0, 0));
 
-	projMatrix = Matrix4::Perspective(1, 100, 1, 45);
+	projMatrix = Matrix4::Perspective(1, 200000, 1, 45);
 	shadowMatrix = projMatrix * viewMatrix;
 
 	modelMatrix.ToIdentity();
@@ -602,7 +606,6 @@ void Renderer::DrawShadowScene(Light* l)
 	UpdateShaderMatrices();
 
 	drawNodes();
-	clearNodeLists();
 	DrawAnimations();
 
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);

@@ -44,7 +44,7 @@ protected:
 	void combineBuffers();
 	void createPointLights();
 	bool isCameraFree;
-	bool isShadow;
+	bool isShadow = false;
 	bool isMainScene;
 	bool isTransScene;
 	HeightMap* heightMap;
