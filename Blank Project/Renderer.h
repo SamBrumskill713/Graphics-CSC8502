@@ -44,6 +44,9 @@ protected:
 	void combineBuffers();
 	void createPointLights();
 	bool isCameraFree;
+	bool isShadow;
+	bool isMainScene;
+	bool isTransScene;
 	HeightMap* heightMap;
 	Shader* reflectShader;
 	Shader* skyboxShader;
@@ -54,6 +57,7 @@ protected:
 	Shader* pointLightShader;
 	Shader* combineShader;
 	Shader* nodeShader;
+	Shader* characterShadowShader;
 	Light* light;
 	Light* pointLights;
 	Camera* activeCamera;
@@ -66,6 +70,7 @@ protected:
 	Mesh* UFOBody;
 	Mesh* UFOCockpit;
 	SceneNode* landMapRoot;
+	SceneNode* transSceneRoot;
 	MeshAnimation* soldierAnimation;	
 	MeshMaterial* soldierMaterial;
 	MeshMaterial* TreeMaterial;

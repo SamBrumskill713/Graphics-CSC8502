@@ -54,6 +54,7 @@ Renderer::~Renderer(void) {
 	delete pointLightShader;
 	delete combineShader;
 	delete nodeShader;
+	delete characterShadowShader;
 	delete quad;
 	delete sphere;
 	delete[] pointLights;
@@ -64,8 +65,6 @@ Renderer::~Renderer(void) {
 	delete UFOCockpit;
 	delete UFOBodyMaterial;
 	delete UFOCockpitMaterial;
-
-	// Delete all GL textures we created that were not previously freed
 	for (auto tex : soldierMatTextures) { glDeleteTextures(1, &tex); }
 	for (auto tex : TreeMatTextures) { glDeleteTextures(1, &tex); }
 	for (auto tex : UFOBodyMatTextures) { glDeleteTextures(1, &tex); }
@@ -74,7 +73,6 @@ Renderer::~Renderer(void) {
 	if (waterTex) { glDeleteTextures(1, &waterTex); }
 	if (terrainBump) { glDeleteTextures(1, &terrainBump); }
 	if (cubeMap) { glDeleteTextures(1, &cubeMap); }
-
 	glDeleteTextures(1, &bufferColourTex);
 	glDeleteTextures(1, &bufferNormalTex);
 	glDeleteTextures(1, &bufferDepthTex);
@@ -110,7 +108,7 @@ void Renderer::RenderScene() {
 	sortNodeList();
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	DrawSkybox();
-	//DrawShadowScene(light);
+	DrawShadowScene(&pointLights[0]);
 	fillBuffers();
 	createPointLights();
 	combineBuffers();
@@ -247,6 +245,7 @@ void Renderer::checkShaders()
 	nodeShader = new Shader("SceneVertex.glsl", "SceneFragment.glsl");
 	pointLightShader = new Shader("pointlightvert.glsl", "pointLightFrag.glsl");
 	combineShader = new Shader("combineVert.glsl", "combineFrag.glsl");
+	characterShadowShader = new Shader("shadowSkinning.glsl", "shadowFragment.glsl");
 
 	if (!reflectShader->LoadSuccess() ||
 		!skyboxShader->LoadSuccess() ||
@@ -348,6 +347,8 @@ void Renderer::setVariables()
 	waterCycle = 0.0f;
 	currentFrame = 0;
 	frameTime = 0.0f;
+	isMainScene = true;
+	isTransScene = false;
 }
 
 void Renderer::setNodes() {
@@ -363,7 +364,7 @@ void Renderer::setNodes() {
 		TreeNode->SetShader(nodeShader);
 		int randX = rand() / (RAND_MAX / 8176);
 		int randZ = rand() / (RAND_MAX / 8176);
-		TreeNode->SetTransform(Matrix4::Translation(Vector3(randX, 
+		TreeNode->SetTransform(Matrix4::Translation(Vector3(randX,
 			heightMap->GetHeightAt(randX, randZ), randZ)));
 		TreeNode->SetMatTextures(TreeMatTextures);
 		TreeNode->SetModelScale(Vector3(100.0f, 100.0f, 100.0f));
@@ -371,18 +372,26 @@ void Renderer::setNodes() {
 	}
 
 	SceneNode* UFOBodyNode = new SceneNode(UFOBody);
-	UFOBodyNode->SetShader(nodeShader);	
+	UFOBodyNode->SetShader(nodeShader);
 	UFOBodyNode->SetTransform(UFOBodyModel);
 	UFOBodyNode->SetMatTextures(UFOBodyMatTextures);
 	//UFOBodyNode->SetModelScale();
 	heightmapNode->AddChild(UFOBodyNode);
 
 	SceneNode* UFOCockpitNode = new SceneNode(UFOCockpit);
-	UFOCockpitNode->SetShader(nodeShader);	
+	UFOCockpitNode->SetShader(nodeShader);
 	UFOCockpitNode->SetTransform(UFOCockpitModel);
 	UFOCockpitNode->SetMatTextures(UFOCockpitMatTextures);
 	//UFOCockpitNode->SetModelScale();
 	UFOBodyNode->AddChild(UFOCockpitNode);
+	
+	/*else if (isTransScene && !isMainScene) {
+		SceneNode* heightmapNode = new SceneNode(heightMap);
+		heightmapNode->SetShader(sceneShader);
+		heightmapNode->AddTexture(terrainTex);
+		heightmapNode->AddTexture(terrainBump);
+		transSceneRoot->AddChild(heightmapNode);
+	}*/
 }
 
 void Renderer::buildNodeLists(SceneNode* from)
@@ -423,9 +432,9 @@ void Renderer::drawNodes()
 	for (const auto& i : nodeList) {
 		drawNode(i);
 	}
-	//for (const auto& i : transparentNodeList) {
-		//drawNode(i);
-	//}
+	for (const auto& i : transparentNodeList) {
+		drawNode(i);
+	}
 }
 
 void Renderer::clearNodeLists() {
@@ -435,50 +444,58 @@ void Renderer::clearNodeLists() {
 
 void Renderer::drawNode(SceneNode* n)
 {
-	Shader* nodeShader = n->GetShader();
-	if (nodeShader != nullptr) {
-		BindShader(nodeShader);
-	}
-	UpdateShaderMatrices();
-	if (n->GetMesh()) {
-		Matrix4 model = n->GetWorldTransform() * Matrix4::Scale(n->GetModelScale());
-		if (nodeShader) {
-			glUniformMatrix4fv(glGetUniformLocation(nodeShader->GetProgram(),
-				"modelMatrix"), 1, false, model.values);
-			glUniform4fv(glGetUniformLocation(nodeShader->GetProgram(),
-				"nodeColour"), 1, (float*)&n->GetColour());
-		}
-
-		else if (n->GetMesh()->GetSubMeshCount() == 1) {
-			if(nodeShader){
-			GLuint texture = 0;
-			texture = n->GetTexture(0);
-			glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), "useTexture"),
-				texture);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, texture);
-			}
-		}
-
-		else {
-			for (int i = 0; i < n->GetMesh()->GetSubMeshCount(); ++i) {
-				glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), "useTexture"),
-					n->GetMatTexture(i));
-				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, n->GetMatTexture(i));
-
-				n->GetMesh()->DrawSubMesh(i);
-			}
-		}
-		n->Draw(*this);
-	}
-	if (n->GetHeightMap() != nullptr) {
-		if (nodeShader) {
-			BindShader(nodeShader);
-			n->setShaderTextures();
-		}
+	if (isShadow) {
+		modelMatrix = n->GetWorldTransform() * Matrix4::Scale(n->GetModelScale());
 		UpdateShaderMatrices();
 		n->Draw(*this);
+	}
+
+	else if (!isShadow) {
+		Shader* nodeShader = n->GetShader();
+		if (nodeShader != nullptr) {
+			BindShader(nodeShader);
+		}
+		UpdateShaderMatrices();
+		if (n->GetMesh()) {
+			Matrix4 model = n->GetWorldTransform() * Matrix4::Scale(n->GetModelScale());
+			if (nodeShader) {
+				glUniformMatrix4fv(glGetUniformLocation(nodeShader->GetProgram(),
+					"modelMatrix"), 1, false, model.values);
+				glUniform4fv(glGetUniformLocation(nodeShader->GetProgram(),
+					"nodeColour"), 1, (float*)&n->GetColour());
+			}
+
+			else if (n->GetMesh()->GetSubMeshCount() == 1) {
+				if (nodeShader) {
+					GLuint texture = 0;
+					texture = n->GetTexture(0);
+					glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), "useTexture"),
+						texture);
+					glActiveTexture(GL_TEXTURE0);
+					glBindTexture(GL_TEXTURE_2D, texture);
+				}
+			}
+
+			else {
+				for (int i = 0; i < n->GetMesh()->GetSubMeshCount(); ++i) {
+					glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), "useTexture"),
+						n->GetMatTexture(i));
+					glActiveTexture(GL_TEXTURE0);
+					glBindTexture(GL_TEXTURE_2D, n->GetMatTexture(i));
+
+					n->GetMesh()->DrawSubMesh(i);
+				}
+			}
+			n->Draw(*this);
+		}
+		if (n->GetHeightMap() != nullptr) {
+			if (nodeShader) {
+				BindShader(nodeShader);
+				n->setShaderTextures();
+			}
+			UpdateShaderMatrices();
+			n->Draw(*this);
+		}
 	}
 }
 
@@ -518,34 +535,55 @@ void Renderer::checkAnimation() {
 }
 
 void Renderer::DrawAnimations() {
-	BindShader(characterShader);
-	glUniform1i(glGetUniformLocation(characterShader->GetProgram(), "diffuseTex"), 0);
+	if (isShadow) {
+		BindShader(characterShadowShader);
+		modelMatrix = soldierModel;
+		UpdateShaderMatrices();
+		vector<Matrix4> frameMatrices;
 
-	modelMatrix = soldierModel;
+		const Matrix4* invBindPose = soldier->GetInverseBindPose();
+		const Matrix4* frameData = soldierAnimation->GetJointData(currentFrame);
 
-	UpdateShaderMatrices();
-
-	vector<Matrix4> frameMatrices;
-
-	const Matrix4* invBindPose = soldier->GetInverseBindPose();
-	const Matrix4* frameData = soldierAnimation->GetJointData(currentFrame);
-
-	for (unsigned int i = 0; i < soldier->GetJointCount(); ++i) {
-		frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
+		for (unsigned int i = 0; i < soldier->GetJointCount(); ++i) {
+			frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
+		}
+		int j = glGetUniformLocation(characterShadowShader->GetProgram(), "joints");
+		glUniformMatrix4fv(j, frameMatrices.size(), false, (float*)frameMatrices.data());
+		for (int i = 0; i < soldier->GetSubMeshCount(); ++i) {
+			soldier->DrawSubMesh(i);
+		}
 	}
+	else if (!isShadow) {
+		BindShader(characterShader);
+		glUniform1i(glGetUniformLocation(characterShader->GetProgram(), "diffuseTex"), 0);
 
-	int j = glGetUniformLocation(characterShader->GetProgram(), "joints");
-	glUniformMatrix4fv(j, frameMatrices.size(), false, (float*)frameMatrices.data());
+		modelMatrix = soldierModel;
 
-	for (int i = 0; i < soldier->GetSubMeshCount(); ++i) {
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, soldierMatTextures[i]);
-		soldier->DrawSubMesh(i);
+		UpdateShaderMatrices();
+
+		vector<Matrix4> frameMatrices;
+
+		const Matrix4* invBindPose = soldier->GetInverseBindPose();
+		const Matrix4* frameData = soldierAnimation->GetJointData(currentFrame);
+
+		for (unsigned int i = 0; i < soldier->GetJointCount(); ++i) {
+			frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
+		}
+
+		int j = glGetUniformLocation(characterShader->GetProgram(), "joints");
+		glUniformMatrix4fv(j, frameMatrices.size(), false, (float*)frameMatrices.data());
+
+		for (int i = 0; i < soldier->GetSubMeshCount(); ++i) {
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, soldierMatTextures[i]);
+			soldier->DrawSubMesh(i);
+		}
 	}
 }
 
 void Renderer::DrawShadowScene(Light* l)
 {
+	isShadow = true;
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
 	glClear(GL_DEPTH_BUFFER_BIT);
 	glViewport(0, 0, SHADOWSIZE, SHADOWSIZE);
@@ -563,13 +601,16 @@ void Renderer::DrawShadowScene(Light* l)
 	textureMatrix.ToIdentity();
 	UpdateShaderMatrices();
 
-
+	drawNodes();
+	clearNodeLists();
+	DrawAnimations();
 
 	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 	glViewport(0, 0, width, height);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glCullFace(GL_BACK);
+	isShadow = false;
 }
 
 void Renderer::checkCurrentCamera()
@@ -672,6 +713,10 @@ void Renderer::createPointLights()
 	glUniform1i(glGetUniformLocation(pointLightShader->GetProgram(), "normTex"), 1);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, bufferNormalTex);
+
+	glUniform1i(glGetUniformLocation(pointLightShader->GetProgram(), "shadowTex"), 2);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, shadowTex);
 
 	glUniform3fv(glGetUniformLocation(pointLightShader->GetProgram(), "cameraPos"),
 		1, (float*)&activeCamera->GetPosition());

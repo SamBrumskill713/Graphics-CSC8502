@@ -150,7 +150,7 @@ void Renderer::DrawMainScene() {
 	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "diffuseTex"), 0);
 	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "bumpTex"), 1);
 	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "shadowTex"), 2);
-	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "shadowTex2"), 3);
+	//glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "shadowTex2"), 3);
 	glUniform3fv(glGetUniformLocation(sceneShader->GetProgram(), "cameraPos"), 1,
 		(float*)&camera->GetPosition());
 
@@ -163,8 +163,8 @@ void Renderer::DrawMainScene() {
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, shadowTex);
 	
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, shadowTex2);
+	/*glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, shadowTex2);*/
 
 	for (int i = 0; i < 4; ++i) {
 		modelMatrix = sceneTransforms[i];
