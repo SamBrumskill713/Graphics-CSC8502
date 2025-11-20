@@ -4,6 +4,7 @@
 #include "Vector4.h"
 #include "Mesh.h"
 #include "HeightMap.h"
+#include "MeshAnimation.h"
 #include <vector>
 
 class SceneNode {
@@ -63,6 +64,9 @@ public:
 
 	HeightMap* GetHeightMap() const { return heightMap; }
 
+	void SetAnimation(MeshAnimation* anim) { animation = anim; }
+	MeshAnimation* GetAnimation() const { return animation; }
+
 	static bool CompareByCameraDistance(SceneNode* a, SceneNode* b) {
 		return (a->distanceFromCamera < b->distanceFromCamera) ? true : false;
 	}
@@ -73,6 +77,7 @@ protected:
 	Mesh* mesh;
 	Shader* shader;
 	HeightMap* heightMap;
+	MeshAnimation* animation;
 	Matrix4 worldTransform;
 	Matrix4 transform;
 	Vector3 modelScale;
@@ -86,4 +91,5 @@ protected:
 	float boundingRadius;
 	GLuint texture;
 	GLuint bumpMap;
+	int currentFrame;
 };

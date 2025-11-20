@@ -61,14 +61,11 @@ Renderer::~Renderer(void) {
 	delete landMapRoot;
 	delete Tree;
 	delete TreeMaterial;
-	delete UFOBody;
-	delete UFOCockpit;
-	delete UFOBodyMaterial;
-	delete UFOCockpitMaterial;
+	delete UFO;
+	delete UFOMaterial;
 	for (auto tex : soldierMatTextures) { glDeleteTextures(1, &tex); }
 	for (auto tex : TreeMatTextures) { glDeleteTextures(1, &tex); }
-	for (auto tex : UFOBodyMatTextures) { glDeleteTextures(1, &tex); }
-	for (auto tex : UFOCockpitMatTextures) { glDeleteTextures(1, &tex); }
+	for (auto tex : UFOMatTextures) { glDeleteTextures(1, &tex); }
 	if (terrainTex) { glDeleteTextures(1, &terrainTex); }
 	if (waterTex) { glDeleteTextures(1, &waterTex); }
 	if (terrainBump) { glDeleteTextures(1, &terrainBump); }
@@ -97,6 +94,16 @@ void Renderer::UpdateScene(float dt) {
 	while (frameTime < 0.0f) {
 		currentFrame = (currentFrame + 1) % soldierAnimation->GetFrameCount();
 		frameTime += 1.0f / soldierAnimation->GetFrameRate();
+	}
+	soldierModel = Matrix4::Translation(Vector3(0, heightMap->GetHeightAt(soldierPos.x,
+		soldierPos.z + (direction * 50 * dt)) - soldierPos.y, direction * 50 * dt)) * 
+		soldierModel;
+	soldierPos = soldierPos + Vector3(0, 0, direction * 50 * dt);
+	soldierPos.y = heightMap->GetHeightAt(soldierPos.x, soldierPos.z);
+	if (soldierPos.y < 85) {
+		soldierModel = Matrix4::Translation(soldierPos) * Matrix4::Rotation(180, 
+			Vector3(0, 1, 0)) * Matrix4::Translation(-soldierPos) * soldierModel;
+		direction *= -1;
 	}
 	checkCurrentCamera();
 }
@@ -178,8 +185,6 @@ void Renderer::checkTextures()
 		TEXTUREDIR"front.png", TEXTUREDIR"back.png",
 		SOIL_LOAD_RGB, SOIL_CREATE_NEW_ID, 0);
 
-	std::cout << UFOCockpit->GetSubMeshCount() << std::endl;
-
 	for (int i = 0; i < soldier->GetSubMeshCount(); ++i) {
 		const MeshMaterialEntry* matEntry = soldierMaterial->GetMaterialForLayer(i);
 
@@ -202,26 +207,15 @@ void Renderer::checkTextures()
 		TreeMatTextures.emplace_back(texID);
 	}
 
-	for (int i = 0; i < UFOBody->GetSubMeshCount(); ++i) {
-		const MeshMaterialEntry* matEntry = UFOBodyMaterial->GetMaterialForLayer(i);
+	for (int i = 0; i < UFO->GetSubMeshCount(); ++i) {
+		const MeshMaterialEntry* matEntry = UFOMaterial->GetMaterialForLayer(i);
 
 		const string* filename = nullptr;
 		matEntry->GetEntry("Diffuse", &filename);
 		string path = TEXTUREDIR + *filename;
 		GLuint texID = SOIL_load_OGL_texture(path.c_str(),
 			SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
-		UFOBodyMatTextures.emplace_back(texID);
-	}
-
-	for (int i = 0; i < UFOCockpit->GetSubMeshCount(); ++i) {
-		const MeshMaterialEntry* matEntry = UFOCockpitMaterial->GetMaterialForLayer(i);
-
-		const string* filename = nullptr;
-		matEntry->GetEntry("Diffuse", &filename);
-		string path = TEXTUREDIR + *filename;
-		GLuint texID = SOIL_load_OGL_texture(path.c_str(),
-			SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
-		UFOCockpitMatTextures.emplace_back(texID);
+		UFOMatTextures.emplace_back(texID);
 	}
 
 	if (!terrainTex || !waterTex || !terrainBump || !cubeMap) {
@@ -327,21 +321,20 @@ void Renderer::setVariables()
 	soldierPos = Vector3(heightmapSize.x / 2, 
 		heightMap->GetHeightAt(heightmapSize.x/2, heightmapSize.z/2), heightmapSize.z / 2);
 	soldierModel = Matrix4::Translation(soldierPos) * 
+		Matrix4::Rotation(180, Vector3(0, 1, 0)) * 
 		Matrix4::Scale(Vector3(100, 100, 100));
 	TreePos = Vector3(rand() % (int)heightmapSize.x, 0, rand() % (int)heightmapSize.z);
 	TreeModel = Matrix4::Translation(TreePos) *
 		Matrix4::Scale(Vector3(50, 50, 50));
-	UFOBodyPos = Vector3(heightmapSize.x / 2, heightmapSize.y, heightmapSize.z / 2);
-	UFOBodyModel = Matrix4::Translation(UFOBodyPos) *
+	UFOPos = Vector3(heightmapSize.x / 2, heightmapSize.y, heightmapSize.z / 2);
+	UFOModel = Matrix4::Translation(UFOPos) *
 		Matrix4::Scale(Vector3(20, 20, 20));
-	UFOCockpitPos = Vector3(UFOBodyPos.x, UFOBodyPos.y + 50, UFOBodyPos.z);
-	UFOCockpitModel = Matrix4::Translation(UFOCockpitPos) *
 		Matrix4::Scale(Vector3(20, 20, 20));
 	pointLights = new Light[LIGHT_NUM];
 	Light& l = pointLights[0];
 	l.SetPosition(Vector3(heightmapSize.x / 2, 1000.0f, heightmapSize.z / 2));
 	l.SetColour(Vector4(0.95f, 0.9f, 0.85f, 1));
-	l.SetRadius(5000.0f);
+	l.SetRadius(heightmapSize.Length());
 	landMapRoot = new SceneNode();
 	setNodes();
 	waterRotate = 0.0f;
@@ -359,6 +352,7 @@ void Renderer::setNodes() {
 	heightmapNode->SetShader(sceneShader);
 	heightmapNode->AddTexture(terrainTex);
 	heightmapNode->AddTexture(terrainBump);
+	heightmapNode->SetBoundingRadius(heightmapSize.Length());
 	landMapRoot->AddChild(heightmapNode);
 
 	for (int i = 0; i < TREE_NUM; ++i) {
@@ -370,22 +364,17 @@ void Renderer::setNodes() {
 			heightMap->GetHeightAt(randX, randZ), randZ)));
 		TreeNode->SetMatTextures(TreeMatTextures);
 		TreeNode->SetModelScale(Vector3(100.0f, 100.0f, 100.0f));
+		TreeNode->SetBoundingRadius(700.0f);
 		heightmapNode->AddChild(TreeNode);
 	}
 
-	SceneNode* UFOBodyNode = new SceneNode(UFOBody);
-	UFOBodyNode->SetShader(nodeShader);
-	UFOBodyNode->SetTransform(UFOBodyModel);
-	UFOBodyNode->SetMatTextures(UFOBodyMatTextures);
+	SceneNode* UFONode = new SceneNode(UFO);
+	UFONode->SetShader(nodeShader);
+	UFONode->SetTransform(UFOModel);
+	UFONode->SetMatTextures(UFOMatTextures);
+	UFONode->SetBoundingRadius(200.0f);
 	//UFOBodyNode->SetModelScale();
-	heightmapNode->AddChild(UFOBodyNode);
-
-	SceneNode* UFOCockpitNode = new SceneNode(UFOCockpit);
-	UFOCockpitNode->SetShader(nodeShader);
-	UFOCockpitNode->SetTransform(UFOCockpitModel);
-	UFOCockpitNode->SetMatTextures(UFOCockpitMatTextures);
-	//UFOCockpitNode->SetModelScale();
-	UFOBodyNode->AddChild(UFOCockpitNode);
+	heightmapNode->AddChild(UFONode);
 	
 	/*else if (isTransScene && !isMainScene) {
 		SceneNode* heightmapNode = new SceneNode(heightMap);
@@ -465,30 +454,7 @@ void Renderer::drawNode(SceneNode* n)
 					"modelMatrix"), 1, false, model.values);
 				glUniform4fv(glGetUniformLocation(nodeShader->GetProgram(),
 					"nodeColour"), 1, (float*)&n->GetColour());
-			}
-
-			else if (n->GetMesh()->GetSubMeshCount() == 1) {
-				if (nodeShader) {
-					GLuint texture = 0;
-					texture = n->GetTexture(0);
-					glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), 
-						"useTexture"),
-						texture);
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, texture);
-				}
-			}
-
-			else {
-				for (int i = 0; i < n->GetMesh()->GetSubMeshCount(); ++i) {
-					glUniform1i(glGetUniformLocation(nodeShader->GetProgram(), 
-						"useTexture"),
-						n->GetMatTexture(i));
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, n->GetMatTexture(i));
-
-					n->GetMesh()->DrawSubMesh(i);
-				}
+				n->setShaderTextures();
 			}
 			n->Draw(*this);
 		}
@@ -509,8 +475,7 @@ void Renderer::checkMeshes() {
 	soldier = Mesh::LoadFromMeshFile("Role_T.msh");
 	sphere = Mesh::LoadFromMeshFile("Sphere.msh");
 	Tree = Mesh::LoadFromMeshFile("DeadTree_1.msh");
-	UFOBody = Mesh::LoadFromMeshFile("UFO_body.msh");
-	UFOCockpit = Mesh::LoadFromMeshFile("UFO_cockpit.msh");
+	UFO = Mesh::LoadFromMeshFile("Low_poly_UFO.msh");
 	if (heightMap == nullptr) {
 		std::cout << "No model found";
 		return;
@@ -520,11 +485,9 @@ void Renderer::checkMeshes() {
 void Renderer::checkModelMatrial() {
 	soldierMaterial = new MeshMaterial("Role_T.mat");
 	TreeMaterial = new MeshMaterial("DeadTree_1.mat");
-	UFOBodyMaterial = new MeshMaterial("UFO_body.mat");
-	UFOCockpitMaterial = new MeshMaterial("UFO_cockpit.mat");
+	UFOMaterial = new MeshMaterial("Low_poly_UFO.mat");
 	if (soldierMaterial == nullptr || TreeMaterial == nullptr 
-		|| UFOMaterial == nullptr || UFOBodyMaterial == nullptr 
-		|| UFOCockpitMaterial == nullptr) {
+		|| UFOMaterial == nullptr) {
 		std::cout << "No material found \n";
 		return;
 	}
@@ -540,10 +503,10 @@ void Renderer::checkAnimation() {
 
 void Renderer::DrawAnimations() {
 	if (isShadow) {
-		//BindShader(characterShadowShader);
+		BindShader(characterShadowShader);
 		modelMatrix = soldierModel;
 		UpdateShaderMatrices();
-	/*	vector<Matrix4> frameMatrices;
+		vector<Matrix4> frameMatrices;
 
 		const Matrix4* invBindPose = soldier->GetInverseBindPose();
 		const Matrix4* frameData = soldierAnimation->GetJointData(currentFrame);
@@ -552,7 +515,7 @@ void Renderer::DrawAnimations() {
 			frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
 		}
 		int j = glGetUniformLocation(characterShadowShader->GetProgram(), "joints");
-		glUniformMatrix4fv(j, frameMatrices.size(), false, (float*)frameMatrices.data());*/
+		glUniformMatrix4fv(j, frameMatrices.size(), false, (float*)frameMatrices.data());
 		for (int i = 0; i < soldier->GetSubMeshCount(); ++i) {
 			soldier->DrawSubMesh(i);
 		}
@@ -598,7 +561,7 @@ void Renderer::DrawShadowScene(Light* l)
 
 	viewMatrix = Matrix4::BuildViewMatrix(l->GetPosition(), Vector3(0, 0, 0));
 
-	projMatrix = Matrix4::Perspective(1, 200000, 1, 45);
+	projMatrix = Matrix4::Perspective(100, 10000.0f, 1, 45);
 	shadowMatrix = projMatrix * viewMatrix;
 
 	modelMatrix.ToIdentity();
@@ -720,6 +683,11 @@ void Renderer::createPointLights()
 	glUniform1i(glGetUniformLocation(pointLightShader->GetProgram(), "shadowTex"), 2);
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, shadowTex);
+
+	GLint loc = glGetUniformLocation(pointLightShader->GetProgram(), "shadowMatrix");
+	if (loc != -1) {
+		glUniformMatrix4fv(loc, 1, false, shadowMatrix.values);
+	}
 
 	glUniform3fv(glGetUniformLocation(pointLightShader->GetProgram(), "cameraPos"),
 		1, (float*)&activeCamera->GetPosition());

@@ -25,7 +25,7 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 		s->SetModelScale(Vector3(100.0f, 100.0f, 100.0f));
 		s->SetBoundingRadius(100.0f);
 		s->setMesh(quad);
-		s->SetTexture(texture);
+		s->AddTexture(texture);
 		root->AddChild(s);
 	}
 
@@ -97,7 +97,7 @@ void Renderer::DrawNode(SceneNode* n) {
 		glUniformMatrix4fv(glGetUniformLocation(shader->GetProgram(), "modelMatrix"), 1, false, model.values);
 		glUniform4fv(glGetUniformLocation(shader->GetProgram(),"nodeColour"), 1, (float*)&n->GetColour());
 
-		texture = n->GetTexture();
+		texture = n->GetTexture(0);
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glUniform1i(glGetUniformLocation(shader->GetProgram(), "useTexture"), texture);

@@ -9,7 +9,7 @@ SceneNode::SceneNode()
 	parent = nullptr;
 	heightMap = nullptr;
 	modelScale = Vector3(1, 1, 1);
-	boundingRadius = 5000.0f;
+	boundingRadius = 1.0f;
 	distanceFromCamera = 0.0f;
 	texture = 0;
 }
@@ -63,30 +63,68 @@ void SceneNode::setShaderTextures()
 			return;
 		}
 
+		if (mesh && getMatTextureSize() == 1) {
+			if (!matTextures.empty()) {
+				glUniform1i(glGetUniformLocation(GetShader()->GetProgram(),"useTexture"), 
+					GetMatTexture(0));
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, matTextures[0]);
+			}
+			return;
+		}
+
 		else if (mesh && mesh->GetSubMeshCount() == 1)
 		{
 			if (!textures.empty())
 			{
+				glUniform1i(glGetUniformLocation(GetShader()->GetProgram(), "useTexture"), 
+					0);
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, textures[0]);
-				glUniform1i(glGetUniformLocation(shader->GetProgram(), "diffuseTex"), 0);
 			}
 			return;
 		}
 
 		else if (mesh && mesh->GetSubMeshCount() > 1)
 		{
-			for (int i = 0; i < matTextures.size(); ++i)
-			{
-				std::string uniformName = "diffuseTex" + std::to_string(i);
-				GLuint tex = matTextures[i];
+			if (!matTextures.empty()) {
+				for (int i = 0; i < GetMesh()->GetSubMeshCount(); ++i) {
+					glUniform1i(glGetUniformLocation(GetShader()->GetProgram(),
+						"useTexture"), matTextures[i]);
+					glActiveTexture(GL_TEXTURE0);
+					glBindTexture(GL_TEXTURE_2D, matTextures[i]);
 
-				glActiveTexture(GL_TEXTURE0 + i);
-				glBindTexture(GL_TEXTURE_2D, tex);
-
-				glUniform1i(
-					glGetUniformLocation(shader->GetProgram(), uniformName.c_str()),i);
+					GetMesh()->DrawSubMesh(i);
+				}
 			}
+			return;
+		}
+		
+		else if (mesh && GetAnimation()) {
+			if (!GetAnimation()) {
+				glUniform1i(glGetUniformLocation(GetShader()->GetProgram(),
+					"diffuseTex"), 0);
+
+				vector<Matrix4> frameMatrices;
+
+				const Matrix4* invBindPose = GetMesh()->GetInverseBindPose();
+				const Matrix4* frameData = GetAnimation()->GetJointData(currentFrame);
+
+				for (unsigned int i = 0; i < GetMesh()->GetJointCount(); ++i) {
+					frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
+				}
+
+				int j = glGetUniformLocation(GetShader()->GetProgram(), "joints");
+				glUniformMatrix4fv(j, frameMatrices.size(), false, 
+					(float*)frameMatrices.data());
+
+				for (int i = 0; i < GetMesh()->GetSubMeshCount(); ++i) {
+					glActiveTexture(GL_TEXTURE0);
+					glBindTexture(GL_TEXTURE_2D, GetMatTexture(i));
+					GetMesh()->DrawSubMesh(i);
+				}
+			}
+			return;
 		}
 	}
 }
@@ -113,7 +151,9 @@ void SceneNode::Update(float dt)
 
 void SceneNode::Draw(const OGLRenderer& r)
 {
-	if (mesh) { mesh->Draw(); }
+	if (mesh) { 
+		mesh->Draw(); 
+	}
 	if (heightMap) {
 		heightMap->Draw();
 	}
