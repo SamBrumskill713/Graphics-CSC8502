@@ -505,22 +505,22 @@ void Renderer::setNodes() {
 		heightmapNode->AddChild(TreeNode);
 	}
 
-	SceneNode* UFONode = new SceneNode(UFO);
-	UFONode->SetShader(nodeShader);
-	UFONode->SetTransform(UFOModel);
-	UFONode->SetMatTextures(UFOMatTextures);
-	UFONode->SetBoundingRadius(200.0f);
-	//UFOBodyNode->SetModelScale();
-	heightmapNode->AddChild(UFONode);
+	//SceneNode* UFONode = new SceneNode(UFO);
+	//UFONode->SetShader(nodeShader);
+	//UFONode->SetTransform(UFOModel);
+	//UFONode->SetMatTextures(UFOMatTextures);
+	//UFONode->SetBoundingRadius(200.0f);
+	////UFOBodyNode->SetModelScale();
+	//heightmapNode->AddChild(UFONode);
 
-	SceneNode* StainedGlassNode = new SceneNode(quad);
+	/*SceneNode* StainedGlassNode = new SceneNode(quad);
 	StainedGlassNode->SetShader(nodeShader);
 	StainedGlassNode->SetTransform(Matrix4::Translation(Vector3(2000,
 		heightMap->GetHeightAt(2000, 2000), 2000)) * Matrix4::Scale(Vector3(300.0f,
 			300.0f, 300.0f)));
 	StainedGlassNode->AddTexture(stainedGlassTex);
 	StainedGlassNode->SetBoundingRadius(500.0f);
-	heightmapNode->AddChild(StainedGlassNode);
+	heightmapNode->AddChild(StainedGlassNode);*/
 
 	
 	Vector3 heightmapSize2 = heightMap2->GetHeightmapSize();
@@ -531,14 +531,14 @@ void Renderer::setNodes() {
 	transHeightmapNode->SetBoundingRadius(heightmapSize.Length());
 	transSceneRoot->AddChild(transHeightmapNode);
 
-	SceneNode* houseNode = new SceneNode(houseMesh);
+	/*SceneNode* houseNode = new SceneNode(houseMesh);
 	houseNode->SetShader(nodeShader);
 	houseNode->SetTransform(Matrix4::Translation(Vector3(4000,
 		heightMap->GetHeightAt(4000, 4000), 4000)) * Matrix4::Scale(Vector3(100.0f,
 			100.0f, 100.0f)));
 	houseNode->SetMatTextures(houseMatTextures);
 	houseNode->SetBoundingRadius(500.0f);
-	transHeightmapNode->AddChild(houseNode);
+	transHeightmapNode->AddChild(houseNode);*/
 
 	SceneNode* cubeNodeLocal = new SceneNode(cube);
 	cubeNodeLocal->SetShader(nodeShader);
