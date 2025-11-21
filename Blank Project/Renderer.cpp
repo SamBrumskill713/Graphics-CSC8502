@@ -30,6 +30,9 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	GenerateScreenTexture(bufferNormalTex);
 	GenerateScreenTexture(lightDiffuseTex);
 	GenerateScreenTexture(lightSpecularTex);
+	GenerateScreenTexture(bufferColourTex2[0]);
+	GenerateScreenTexture(bufferColourTex2[1]);
+	GenerateScreenTexture(bufferDepthTex2, true);
 	checkBuffers();
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -71,10 +74,10 @@ Renderer::~Renderer(void) {
 	delete houseMaterial;
 	delete heightMap;
 	delete heightMap2;
-	/*glDeleteTextures(2, bufferColourTex2);
+	glDeleteTextures(2, bufferColourTex2);
 	glDeleteTextures(1, &bufferDepthTex2);
 	glDeleteFramebuffers(1, &bufferFBO2);
-	glDeleteFramebuffers(1, &processFBO);*/
+	glDeleteFramebuffers(1, &processFBO);
 	for (auto tex : awesomeSkeletonMatTextures) { glDeleteTextures(1, &tex); }
 	for (auto tex : houseMatTextures) { glDeleteTextures(1, &tex); }
 	for (auto tex : soldierMatTextures) { glDeleteTextures(1, &tex); }
@@ -385,8 +388,8 @@ void Renderer::checkBuffers()
 
 	/*glGenTextures(1, &bufferDepthTex2);
 	glBindTexture(GL_TEXTURE_2D, bufferDepthTex2);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height, 0,
@@ -408,9 +411,9 @@ void Renderer::checkBuffers()
 
 	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO2);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-		bufferDepthTex, 0);
+		bufferDepthTex2, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D,
-		bufferDepthTex, 0);
+		bufferDepthTex2, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 		bufferColourTex2[0], 0);
 
@@ -809,6 +812,7 @@ void Renderer::fillBuffers()
 
 void Renderer::combineBuffers()
 {
+	//glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO2);
 	BindShader(combineShader);
 	modelMatrix.ToIdentity();
 	UpdateShaderMatrices();
@@ -857,11 +861,6 @@ void Renderer::createPointLights()
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, shadowTex);
 
-	GLint loc = glGetUniformLocation(pointLightShader->GetProgram(), "shadowMatrix");
-	if (loc != -1) {
-		glUniformMatrix4fv(loc, 1, false, shadowMatrix.values);
-	}
-
 	glUniform3fv(glGetUniformLocation(pointLightShader->GetProgram(), "cameraPos"),
 		1, (float*)&activeCamera->GetPosition());
 
@@ -893,17 +892,17 @@ void Renderer::createPointLights()
 //{
 //	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 //	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-//	BindShader(sceneShader);
+//	BindShader(texturedShader);
 //	modelMatrix.ToIdentity();
 //	viewMatrix.ToIdentity();
 //	projMatrix.ToIdentity();
 //	UpdateShaderMatrices();
 //	glActiveTexture(GL_TEXTURE0);
 //	glBindTexture(GL_TEXTURE_2D, bufferColourTex2[0]);
-//	glUniform1i(glGetUniformLocation(sceneShader->GetProgram(), "diffuseTex"), 0);
+//	glUniform1i(glGetUniformLocation(texturedShader->GetProgram(), "diffuseTex"), 0);
 //	quad->Draw();
 //}
-//
+
 //void Renderer::drawPostProcess()
 //{
 //	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);

@@ -4,7 +4,7 @@
 
 int main()	{
 	float cooldown = 0.25;
-	Window w("CSC5802", 1920, 1080, true);
+	Window w("CSC5802", 1280, 720, false);
 
 	if(!w.HasInitialised()) {
 		return -1;
