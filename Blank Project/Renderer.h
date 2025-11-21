@@ -53,11 +53,12 @@ protected:
 	void clearNodeLists();
 	void checkAnimation();
 	void checkModelMatrial();
-	void checkCurrentCamera();
 	void GenerateScreenTexture(GLuint &into, bool depth = false);
 	void fillBuffers();
 	void combineBuffers();
 	void createPointLights();
+	void presentScene();
+	void drawPostProcess();
 	bool isCameraFree = true;
 	bool isShadow = false;
 	bool isMainScene = true;
@@ -65,6 +66,7 @@ protected:
 	bool isPostProcessing = false;
 	HeightMap* heightMap;
 	HeightMap* heightMap2;
+	Shader* texturedShader;
 	Shader* reflectShader;
 	Shader* skyboxShader;
 	Shader* lightShader;
@@ -111,6 +113,10 @@ protected:
 	GLuint shadowTex;
 	GLuint shadowFBO;
 	GLuint bufferFBO;
+	GLuint processFBO;
+	GLuint bufferColourTex2[2];
+	GLuint bufferDepthTex2;
+	GLuint bufferFBO2;
 	GLuint pointLightFBO;
 	GLuint bufferColourTex;
 	GLuint bufferNormalTex;
@@ -118,6 +124,7 @@ protected:
 	GLuint lightDiffuseTex;
 	GLuint lightSpecularTex;
 	GLuint cubeTexture;
+	GLuint stainedGlassTex;
 	Matrix4 soldierModel;
 	Vector3 soldierPos;
 	Matrix4 TreeModel;

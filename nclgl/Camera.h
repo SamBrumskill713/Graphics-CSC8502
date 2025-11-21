@@ -38,14 +38,16 @@ public:
 	float GetPitch() const { return pitch; }
 	void SetPitch(float p) { pitch = p; }
 
-	void AddCameraNode(const Vector3& pos, float yaw, float pitch);
+	Vector3 Lerp(Vector3& startingPos, Vector3 endingPos, float timer);
 
-	void UpdateCameraRail(float dt, float speed);
+	void addCameraRailNode(Vector3 pos, float pitch, float yaw);
 
 protected:
+	bool isCameraRail = false;
 	float yaw;
 	float pitch;
 	Vector3 position;
 	int currentNode = 0;
+	float speed = 1.0f;
 	std::vector<CameraNode> railNodes;
 };
