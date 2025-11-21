@@ -55,7 +55,7 @@ MeshMaterial::MeshMaterial(const std::string& filename) {
 	for (int i = 0; i < meshCount; ++i) {
 		int entry;
 		file >> entry;
-		meshLayers.emplace_back(&materialLayers[entry]); //crash here
+		meshLayers.emplace_back(&materialLayers[entry]); 
 	}
 }
 

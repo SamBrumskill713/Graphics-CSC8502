@@ -78,7 +78,7 @@ void SceneNode::setShaderTextures()
 			if (!textures.empty())
 			{
 				glUniform1i(glGetUniformLocation(GetShader()->GetProgram(), "useTexture"), 
-					0);
+					1);
 				glActiveTexture(GL_TEXTURE0);
 				glBindTexture(GL_TEXTURE_2D, textures[0]);
 			}
@@ -100,7 +100,7 @@ void SceneNode::setShaderTextures()
 			return;
 		}
 		
-		else if (mesh && GetAnimation()) {
+		/*else if (mesh && GetAnimation()) {
 			if (!GetAnimation()) {
 				glUniform1i(glGetUniformLocation(GetShader()->GetProgram(),
 					"diffuseTex"), 0);
@@ -125,7 +125,7 @@ void SceneNode::setShaderTextures()
 				}
 			}
 			return;
-		}
+		}*/
 	}
 }
 

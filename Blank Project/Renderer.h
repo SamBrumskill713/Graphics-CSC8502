@@ -17,7 +17,22 @@ public:
 	~Renderer(void);
 	void RenderScene() override;
 	void UpdateScene(float dt) override;
-	void toggleCamera() { isCameraFree = !isCameraFree; }
+	void toggleCamera() { 
+		isCameraFree = !isCameraFree; 
+	}
+	void toggleScene() {
+		isMainScene = !isMainScene;
+		isTransScene = !isTransScene;
+		if (isMainScene) {
+			activeCamera = mainSceneCamera;
+		}
+		else {
+			activeCamera = transSceneCamera;
+		}
+	}
+	void togglePostProcessing() {
+		isPostProcessing = !isPostProcessing;
+	}
 
 protected:
 	void DrawWater(float transparancy);
@@ -45,9 +60,11 @@ protected:
 	void createPointLights();
 	bool isCameraFree;
 	bool isShadow = false;
-	bool isMainScene;
-	bool isTransScene;
+	bool isMainScene = true;
+	bool isTransScene = false;
+	bool isPostProcessing = false;
 	HeightMap* heightMap;
+	HeightMap* heightMap2;
 	Shader* reflectShader;
 	Shader* skyboxShader;
 	Shader* lightShader;
@@ -58,24 +75,36 @@ protected:
 	Shader* combineShader;
 	Shader* nodeShader;
 	Shader* characterShadowShader;
+	Shader* processShader;
 	Light* light;
 	Light* pointLights;
 	Camera* activeCamera;
 	Camera* freeCamera;
+	Camera* mainSceneCamera;
+	Camera* transSceneCamera;
 	Mesh* quad;
 	Mesh* sphere;
 	Mesh* Tree;
 	Mesh* soldier;
 	Mesh* UFO;
+	Mesh* awesomeSkeleton;
+	Mesh* houseMesh;
+	Mesh* cube;
 	SceneNode* landMapRoot;
 	SceneNode* transSceneRoot;
+	SceneNode* cubeNode = nullptr;
 	MeshAnimation* soldierAnimation;	
+	MeshAnimation* awesomeSkeletonAnimation;
 	MeshMaterial* soldierMaterial;
 	MeshMaterial* TreeMaterial;
 	MeshMaterial* UFOMaterial;
+	MeshMaterial* awesomeSkeletonMaterial;
+	MeshMaterial* houseMaterial;
 	vector<GLuint> soldierMatTextures;
 	vector<GLuint> TreeMatTextures;
 	vector<GLuint> UFOMatTextures;
+	vector<GLuint> awesomeSkeletonMatTextures;
+	vector<GLuint> houseMatTextures;
 	GLuint terrainTex;
 	GLuint waterTex;
 	GLuint cubeMap;
@@ -89,12 +118,19 @@ protected:
 	GLuint bufferDepthTex;
 	GLuint lightDiffuseTex;
 	GLuint lightSpecularTex;
+	GLuint cubeTexture;
 	Matrix4 soldierModel;
 	Vector3 soldierPos;
 	Matrix4 TreeModel;
 	Vector3 TreePos;
 	Matrix4 UFOModel;
 	Vector3 UFOPos;
+	Matrix4 skelModel;
+	Vector3 skelPos;
+	Vector3 cubePos;
+	Matrix4 cubeModel;
+	float cubeAngle = 0.0f;
+	float cubeRotateSpeed = 20.0f;
 	float waterRotate;
 	float waterCycle;
 	int currentFrame;

@@ -14,8 +14,8 @@
 
 #define SHADOWSIZE 2048
 const int UFO_NUM = 4;
-const int LIGHT_NUM = 1;
-const int TREE_NUM = 50;
+const int LIGHT_NUM = 25;
+const int TREE_NUM = 10;
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	checkMeshes();
@@ -63,6 +63,15 @@ Renderer::~Renderer(void) {
 	delete TreeMaterial;
 	delete UFO;
 	delete UFOMaterial;
+	delete awesomeSkeleton;
+	delete awesomeSkeletonMaterial;
+	delete awesomeSkeletonAnimation;
+	delete houseMesh;
+	delete houseMaterial;
+	delete heightMap;
+	delete heightMap2;
+	for (auto tex : awesomeSkeletonMatTextures) { glDeleteTextures(1, &tex); }
+	for (auto tex : houseMatTextures) { glDeleteTextures(1, &tex); }
 	for (auto tex : soldierMatTextures) { glDeleteTextures(1, &tex); }
 	for (auto tex : TreeMatTextures) { glDeleteTextures(1, &tex); }
 	for (auto tex : UFOMatTextures) { glDeleteTextures(1, &tex); }
@@ -87,7 +96,12 @@ void Renderer::UpdateScene(float dt) {
 	projMatrix = Matrix4::Perspective(1.0f, 10000.0f,
 		(float)width / (float)height, 45.0f);
 	frameFrustrum.FromMatrix(projMatrix * viewMatrix);
-	landMapRoot->Update(dt);
+	if (isMainScene && landMapRoot && !isTransScene) {
+		landMapRoot->Update(dt);
+	}
+	else if (isTransScene && transSceneRoot && !isMainScene) {
+		transSceneRoot->Update(dt);
+	}
 	waterRotate += dt;
 	waterCycle += dt;
 	frameTime -= dt;
@@ -96,14 +110,22 @@ void Renderer::UpdateScene(float dt) {
 		frameTime += 1.0f / soldierAnimation->GetFrameRate();
 	}
 	soldierModel = Matrix4::Translation(Vector3(0, heightMap->GetHeightAt(soldierPos.x,
-		soldierPos.z + (direction * 50 * dt)) - soldierPos.y, direction * 50 * dt)) * 
+		soldierPos.z + (direction * 50 * dt)) - soldierPos.y, direction * 50 * dt)) *
 		soldierModel;
 	soldierPos = soldierPos + Vector3(0, 0, direction * 50 * dt);
 	soldierPos.y = heightMap->GetHeightAt(soldierPos.x, soldierPos.z);
 	if (soldierPos.y < 85) {
-		soldierModel = Matrix4::Translation(soldierPos) * Matrix4::Rotation(180, 
+		soldierModel = Matrix4::Translation(soldierPos) * Matrix4::Rotation(180,
 			Vector3(0, 1, 0)) * Matrix4::Translation(-soldierPos) * soldierModel;
 		direction *= -1;
+	}
+	if (cubeNode != nullptr) {
+		cubeAngle += cubeRotateSpeed * dt;
+		if (cubeAngle >= 360.0f) cubeAngle -= 360.0f;
+
+		cubeNode->SetTransform(Matrix4::Translation(cubePos) *
+			Matrix4::Rotation(cubeAngle, Vector3(70, 60, 50)) *
+			Matrix4::Scale(Vector3(500, 500, 500)));
 	}
 	checkCurrentCamera();
 }
@@ -111,7 +133,12 @@ void Renderer::UpdateScene(float dt) {
 void Renderer::RenderScene() {
 	modelMatrix.ToIdentity();
 	viewMatrix = activeCamera->BuildViewMatrix();
-	buildNodeLists(landMapRoot);
+	if (isMainScene && landMapRoot && !isTransScene) {
+		buildNodeLists(landMapRoot);
+	}
+	else if (isTransScene && transSceneRoot && !isMainScene) {
+		buildNodeLists(transSceneRoot);
+	}
 	sortNodeList();
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	DrawSkybox();
@@ -140,16 +167,31 @@ void Renderer::DrawWater(float transparancy)
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
 
 	Vector3 hSize = heightMap->GetHeightmapSize();
+	Vector3 hSize2 = heightMap2->GetHeightmapSize();	
 
-	modelMatrix =
-		Matrix4::Translation(hSize * 0.5f) *
-		Matrix4::Scale(hSize * 0.5f) *
-		Matrix4::Rotation(90, Vector3(1, 0, 0));
+	if (isMainScene && !isTransScene) {
+		modelMatrix =
+			Matrix4::Translation(hSize * 0.5f) *
+			Matrix4::Scale(hSize * 0.5f) *
+			Matrix4::Rotation(90, Vector3(1, 0, 0));
 
-	textureMatrix =
-		Matrix4::Translation(Vector3(waterCycle, 0.0f, waterCycle)) *
-		Matrix4::Scale(Vector3(10, 10, 10)) *
-		Matrix4::Rotation(waterRotate, Vector3(0, 0, 1));
+		textureMatrix =
+			Matrix4::Translation(Vector3(waterCycle, 0.0f, waterCycle)) *
+			Matrix4::Scale(Vector3(10, 10, 10)) *
+			Matrix4::Rotation(waterRotate, Vector3(0, 0, 1));
+	}
+
+	if (isTransScene && !isMainScene) {
+		modelMatrix =
+			Matrix4::Translation(hSize2 * 0.5f) *
+			Matrix4::Scale(hSize2 * 0.5f) *
+			Matrix4::Rotation(90, Vector3(1, 0, 0));
+
+		textureMatrix =
+			Matrix4::Translation(Vector3(waterCycle, 0.0f, waterCycle)) *
+			Matrix4::Scale(Vector3(10, 10, 10)) *
+			Matrix4::Rotation(waterRotate, Vector3(0, 0, 1));
+	}
 
 	UpdateShaderMatrices();
 	SetShaderLight(*light);
@@ -177,6 +219,9 @@ void Renderer::checkTextures()
 		SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	
 	terrainBump = SOIL_load_OGL_texture(TEXTUREDIR"SwamplandDOT3.jpg", SOIL_LOAD_AUTO,
+		SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
+
+	cubeTexture = SOIL_load_OGL_texture(TEXTUREDIR"evil.png", SOIL_LOAD_AUTO,
 		SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 
 	cubeMap = SOIL_load_OGL_cubemap(
@@ -218,13 +263,36 @@ void Renderer::checkTextures()
 		UFOMatTextures.emplace_back(texID);
 	}
 
-	if (!terrainTex || !waterTex || !terrainBump || !cubeMap) {
+	for (int i = 0; i < awesomeSkeleton->GetSubMeshCount(); ++i) {
+		const MeshMaterialEntry* matEntry = awesomeSkeletonMaterial->GetMaterialForLayer(i);
+
+		const string* filename = nullptr;
+		matEntry->GetEntry("Diffuse", &filename);
+		string path = TEXTUREDIR + *filename;
+		GLuint texID = SOIL_load_OGL_texture(path.c_str(),
+			SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
+		awesomeSkeletonMatTextures.emplace_back(texID);
+	}
+
+	for (int i = 0; i < houseMesh->GetSubMeshCount(); ++i) {
+		const MeshMaterialEntry* matEntry = houseMaterial->GetMaterialForLayer(i);
+
+		const string* filename = nullptr;
+		matEntry->GetEntry("Diffuse", &filename);
+		string path = TEXTUREDIR + *filename;
+		GLuint texID = SOIL_load_OGL_texture(path.c_str(),
+			SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
+		houseMatTextures.emplace_back(texID);
+	}
+
+	if (!terrainTex || !waterTex || !terrainBump || !cubeMap || !cubeTexture) {
 		return;
 	}
 
 	SetTextureRepeating(terrainTex, true);
 	SetTextureRepeating(terrainBump, true);
 	SetTextureRepeating(waterTex, true);
+	SetTextureRepeating(cubeTexture, true);
 }
 
 void Renderer::checkShaders()
@@ -240,6 +308,7 @@ void Renderer::checkShaders()
 	pointLightShader = new Shader("pointLightvert.glsl", "pointLightFrag.glsl");
 	combineShader = new Shader("combineVert.glsl", "combineFrag.glsl");
 	characterShadowShader = new Shader("shadowSkinning.glsl", "shadowFragment.glsl");
+	processShader = new Shader("TexturedVertex.glsl", "processfrag.glsl");
 
 	if (!reflectShader->LoadSuccess() ||
 		!skyboxShader->LoadSuccess() ||
@@ -272,6 +341,8 @@ void Renderer::checkBuffers()
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
 		shadowTex, 0);
 	glDrawBuffer(GL_NONE);
+
+	//glGenFramebuffers(1, )
 
 	GLenum buffers[2] = {
 		GL_COLOR_ATTACHMENT0,
@@ -308,13 +379,16 @@ void Renderer::setCameraNodes()
 
 void Renderer::setVariables()
 {
-	activeCamera = new Camera(-40, 180, Vector3());
-	Vector3 dimensions = heightMap->GetHeightmapSize();
-	activeCamera->SetPosition(dimensions * Vector3(0.5, 10, 0.5 / 2.0));
+	Vector3 heightmapSize = heightMap->GetHeightmapSize();
+	Vector3 heightmapSize2 = heightMap2->GetHeightmapSize();
+	mainSceneCamera = new Camera(-30, 180, Vector3(heightmapSize.x/2, 2000, 
+		heightmapSize.z));
+	activeCamera = mainSceneCamera;
+	transSceneCamera = new Camera(-30, 90, 
+		Vector3(heightmapSize2.x / 2 + 800, 500, heightmapSize2.z / 4 - 1000));
 	isCameraFree = false;
 	projMatrix = Matrix4::Perspective(1.0f, 10000.0f, 
 		(float)width / (float)height, 45.0f);
-	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 	light = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f),
 		Vector4(1, 1, 1, 1), heightmapSize.x);
 	pointLights = new Light[LIGHT_NUM];
@@ -330,19 +404,32 @@ void Renderer::setVariables()
 	UFOModel = Matrix4::Translation(UFOPos) *
 		Matrix4::Scale(Vector3(20, 20, 20));
 		Matrix4::Scale(Vector3(20, 20, 20));
+	skelPos = Vector3(2000,
+		heightMap->GetHeightAt(2000, 2000), 2000);
+	skelModel = Matrix4::Translation(skelPos) *
+		Matrix4::Scale(Vector3(200.0f, 200.0f, 200.0f));
+	cubePos = Vector3(heightmapSize.x / 2 - 1300, 1000, heightmapSize.z / 2 - 1500);
+	cubeModel = Matrix4::Translation(cubePos) *
+		Matrix4::Scale(Vector3(500.0f, 500.0f, 500.0f));
 	pointLights = new Light[LIGHT_NUM];
 	Light& l = pointLights[0];
-	l.SetPosition(Vector3(heightmapSize.x / 2, 1000.0f, heightmapSize.z / 2));
+	l.SetPosition(Vector3(1000.0f, 1000.0f, -2000.0f));
 	l.SetColour(Vector4(0.95f, 0.9f, 0.85f, 1));
-	l.SetRadius(heightmapSize.Length());
+	l.SetRadius(2000);
+
+	for (int i = 1; i < LIGHT_NUM; ++i) {
+		pointLights[i].SetPosition(Vector3(rand() % (int)heightmapSize.x, 150.0f,
+			rand() % (int)heightmapSize.z));
+		pointLights[i].SetColour(Vector4(0.95f, 0.9f, 0.85f, 1));
+		pointLights[i].SetRadius(2000);
+	}
 	landMapRoot = new SceneNode();
+	transSceneRoot = new SceneNode();
 	setNodes();
 	waterRotate = 0.0f;
 	waterCycle = 0.0f;
 	currentFrame = 0;
 	frameTime = 0.0f;
-	isMainScene = true;
-	isTransScene = false;
 	//isShadow = false;
 }
 
@@ -376,13 +463,30 @@ void Renderer::setNodes() {
 	//UFOBodyNode->SetModelScale();
 	heightmapNode->AddChild(UFONode);
 	
-	/*else if (isTransScene && !isMainScene) {
-		SceneNode* heightmapNode = new SceneNode(heightMap);
-		heightmapNode->SetShader(sceneShader);
-		heightmapNode->AddTexture(terrainTex);
-		heightmapNode->AddTexture(terrainBump);
-		transSceneRoot->AddChild(heightmapNode);
-	}*/
+	Vector3 heightmapSize2 = heightMap2->GetHeightmapSize();
+	SceneNode* transHeightmapNode = new SceneNode(heightMap2);
+	transHeightmapNode->SetShader(sceneShader);
+	transHeightmapNode->AddTexture(terrainTex);
+	transHeightmapNode->AddTexture(terrainBump);
+	transHeightmapNode->SetBoundingRadius(heightmapSize.Length());
+	transSceneRoot->AddChild(transHeightmapNode);
+
+	SceneNode* houseNode = new SceneNode(houseMesh);
+	houseNode->SetShader(nodeShader);
+	houseNode->SetTransform(Matrix4::Translation(Vector3(4000,
+		heightMap->GetHeightAt(4000, 4000), 4000)) * Matrix4::Scale(Vector3(100.0f,
+			100.0f, 100.0f)));
+	houseNode->SetMatTextures(houseMatTextures);
+	houseNode->SetBoundingRadius(500.0f);
+	transHeightmapNode->AddChild(houseNode);
+
+	SceneNode* cubeNodeLocal = new SceneNode(cube);
+	cubeNodeLocal->SetShader(nodeShader);
+	cubeNodeLocal->SetTransform(cubeModel);
+	cubeNodeLocal->SetBoundingRadius(700.0f);
+	cubeNodeLocal->AddTexture(cubeTexture);
+	cubeNode = cubeNodeLocal;
+	transHeightmapNode->AddChild(cubeNodeLocal);
 }
 
 void Renderer::buildNodeLists(SceneNode* from)
@@ -472,10 +576,14 @@ void Renderer::drawNode(SceneNode* n)
 void Renderer::checkMeshes() {
 	quad = Mesh::GenerateQuad();
 	heightMap = new HeightMap(TEXTUREDIR"swampHeightmap.png");
+	heightMap2 = new HeightMap(TEXTUREDIR"testspacetexture.png");
 	soldier = Mesh::LoadFromMeshFile("Role_T.msh");
 	sphere = Mesh::LoadFromMeshFile("Sphere.msh");
 	Tree = Mesh::LoadFromMeshFile("DeadTree_1.msh");
 	UFO = Mesh::LoadFromMeshFile("Low_poly_UFO.msh");
+	houseMesh = Mesh::LoadFromMeshFile("house.msh");
+	awesomeSkeleton = Mesh::LoadFromMeshFile("Skeleton@skin.msh");
+	cube = Mesh::LoadFromMeshFile("cube.msh");
 	if (heightMap == nullptr) {
 		std::cout << "No model found";
 		return;
@@ -486,6 +594,8 @@ void Renderer::checkModelMatrial() {
 	soldierMaterial = new MeshMaterial("Role_T.mat");
 	TreeMaterial = new MeshMaterial("DeadTree_1.mat");
 	UFOMaterial = new MeshMaterial("Low_poly_UFO.mat");
+	houseMaterial = new MeshMaterial("house.mat");
+	awesomeSkeletonMaterial = new MeshMaterial("Skeleton@skin.mat");
 	if (soldierMaterial == nullptr || TreeMaterial == nullptr 
 		|| UFOMaterial == nullptr) {
 		std::cout << "No material found \n";
@@ -495,13 +605,21 @@ void Renderer::checkModelMatrial() {
 
 void Renderer::checkAnimation() {
 	soldierAnimation = new MeshAnimation("Role_T.anm");
-	if (soldierAnimation == nullptr) {
+	awesomeSkeletonAnimation = new MeshAnimation("Idle.anm");
+	if (soldierAnimation == nullptr || awesomeSkeletonAnimation == nullptr) {
 		std::cout << "No animation found \n";
 		return;
 	}
 }
 
 void Renderer::DrawAnimations() {
+	Vector3 heightmapSize2 = heightMap2->GetHeightmapSize();
+	if (!isMainScene && isTransScene) {
+		soldierPos = Vector3(heightmapSize2.x / 2 + 800,
+			heightMap->GetHeightAt(heightmapSize2.x/2, 1000), 1500);
+		soldierModel = Matrix4::Translation(soldierPos) *
+			Matrix4::Scale(Vector3(100.0f, 100.0f, 100.0f));
+	}
 	if (isShadow) {
 		BindShader(characterShadowShader);
 		modelMatrix = soldierModel;
@@ -550,6 +668,7 @@ void Renderer::DrawAnimations() {
 
 void Renderer::DrawShadowScene(Light* l)
 {
+	Vector3 heightMapSize = heightMap->GetHeightmapSize();
 	isShadow = true;
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowFBO);
 	glClear(GL_DEPTH_BUFFER_BIT);
@@ -559,7 +678,8 @@ void Renderer::DrawShadowScene(Light* l)
 
 	BindShader(shadowShader);
 
-	viewMatrix = Matrix4::BuildViewMatrix(l->GetPosition(), Vector3(0, 0, 0));
+	viewMatrix = Matrix4::BuildViewMatrix(l->GetPosition(), Vector3(heightMapSize.x / 2,
+		0, heightMapSize.z / 2));
 
 	projMatrix = Matrix4::Perspective(100, 10000.0f, 1, 45);
 	shadowMatrix = projMatrix * viewMatrix;

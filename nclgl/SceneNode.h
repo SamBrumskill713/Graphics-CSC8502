@@ -71,6 +71,10 @@ public:
 		return (a->distanceFromCamera < b->distanceFromCamera) ? true : false;
 	}
 
+	void UpdateTransform(float dt) {
+		
+	}
+
 
 protected:
 	SceneNode* parent;

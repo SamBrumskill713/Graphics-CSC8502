@@ -31,8 +31,13 @@ public:
 	float GetPitch() const { return pitch; }
 	void SetPitch(float p) { pitch = p; }
 
+	//void cameraRailNodes(Vector3 positions, float yaws, float pitches);
+
 protected:
 	float yaw;
 	float pitch;
 	Vector3 position;
+	//std::vector<Vector3> positions;
+	//std::vector<float> yaws;
+	//std::vector<float> pitches;
 };

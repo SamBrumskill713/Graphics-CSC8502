@@ -3,6 +3,7 @@
 #include <iostream>
 
 int main()	{
+	float cooldown = 0.25;
 	Window w("CSC5802", 1280, 720, false);
 
 	if(!w.HasInitialised()) {
@@ -24,10 +25,16 @@ int main()	{
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_F5)) {
 			Shader::ReloadAllShaders();
 		}
-		if (Window::GetKeyboard()->KeyDown(KEYBOARD_1)) {
+		if (Window::GetKeyboard()->KeyDown(KEYBOARD_1) && cooldown <= 0) {
+			cooldown = 0.25;
 			renderer.toggleCamera();
 			//std::cout << "button pressed";
 		}
+		if (Window::GetKeyboard()->KeyDown(KEYBOARD_F) && cooldown <= 0) {
+			cooldown = 0.25;
+			renderer.toggleScene();
+		}
+		cooldown -= w.GetTimer()->GetTimeDeltaSeconds();
 	}
 	return 0;
 }
