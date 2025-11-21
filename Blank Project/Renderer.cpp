@@ -91,7 +91,12 @@ Renderer::~Renderer(void) {
 }
 
 void Renderer::UpdateScene(float dt) {
-	activeCamera->UpdateCamera(dt);
+	if (!isCameraFree) {
+		activeCamera->UpdateCameraRail(dt, 0.02f);
+	}
+	else {
+		activeCamera->UpdateCamera(dt);
+	}
 	viewMatrix = activeCamera->BuildViewMatrix();
 	projMatrix = Matrix4::Perspective(1.0f, 10000.0f,
 		(float)width / (float)height, 45.0f);
@@ -127,7 +132,6 @@ void Renderer::UpdateScene(float dt) {
 			Matrix4::Rotation(cubeAngle, Vector3(70, 60, 50)) *
 			Matrix4::Scale(Vector3(500, 500, 500)));
 	}
-	checkCurrentCamera();
 }
 
 void Renderer::RenderScene() {
@@ -181,7 +185,7 @@ void Renderer::DrawWater(float transparancy)
 			Matrix4::Rotation(waterRotate, Vector3(0, 0, 1));
 	}
 
-	if (isTransScene && !isMainScene) {
+	else if (isTransScene && !isMainScene) {
 		modelMatrix =
 			Matrix4::Translation(hSize2 * 0.5f) *
 			Matrix4::Scale(hSize2 * 0.5f) *
@@ -375,18 +379,21 @@ void Renderer::checkBuffers()
 
 void Renderer::setCameraNodes()
 {
+	activeCamera->AddCameraNode(Vector3(activeCamera->GetPosition()),
+		activeCamera->GetPitch(), activeCamera->GetYaw());
 }
 
 void Renderer::setVariables()
 {
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 	Vector3 heightmapSize2 = heightMap2->GetHeightmapSize();
-	mainSceneCamera = new Camera(-30, 180, Vector3(heightmapSize.x/2, 2000, 
+	mainSceneCamera = new Camera(0, 100, Vector3(heightmapSize.x/2, 2000, 
 		heightmapSize.z));
-	activeCamera = mainSceneCamera;
-	transSceneCamera = new Camera(-30, 90, 
+	//activeCamera = mainSceneCamera;
+	transSceneCamera = new Camera(-30, 30, 
 		Vector3(heightmapSize2.x / 2 + 800, 500, heightmapSize2.z / 4 - 1000));
-	isCameraFree = false;
+	activeCamera = mainSceneCamera;
+	//isCameraFree = false;
 	projMatrix = Matrix4::Perspective(1.0f, 10000.0f, 
 		(float)width / (float)height, 45.0f);
 	light = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f),
@@ -426,6 +433,7 @@ void Renderer::setVariables()
 	landMapRoot = new SceneNode();
 	transSceneRoot = new SceneNode();
 	setNodes();
+	setCameraNodes();
 	waterRotate = 0.0f;
 	waterCycle = 0.0f;
 	currentFrame = 0;
@@ -697,13 +705,6 @@ void Renderer::DrawShadowScene(Light* l)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glCullFace(GL_BACK);
 	isShadow = false;
-}
-
-void Renderer::checkCurrentCamera()
-{
-	if (isCameraFree) {
-		//activeCamera = freeCamera;
-	}
 }
 
 void Renderer::GenerateScreenTexture(GLuint& into, bool depth)

@@ -23,10 +23,10 @@ public:
 	void toggleScene() {
 		isMainScene = !isMainScene;
 		isTransScene = !isTransScene;
-		if (isMainScene) {
+		if (isMainScene && !isTransScene) {
 			activeCamera = mainSceneCamera;
 		}
-		else {
+		else if (isTransScene && !isMainScene) {
 			activeCamera = transSceneCamera;
 		}
 	}
@@ -58,7 +58,7 @@ protected:
 	void fillBuffers();
 	void combineBuffers();
 	void createPointLights();
-	bool isCameraFree;
+	bool isCameraFree = true;
 	bool isShadow = false;
 	bool isMainScene = true;
 	bool isTransScene = false;
@@ -79,7 +79,6 @@ protected:
 	Light* light;
 	Light* pointLights;
 	Camera* activeCamera;
-	Camera* freeCamera;
 	Camera* mainSceneCamera;
 	Camera* transSceneCamera;
 	Mesh* quad;

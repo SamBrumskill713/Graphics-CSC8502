@@ -55,3 +55,34 @@ Matrix4 Camera::BuildViewMatrix()
 		Matrix4::Rotation(-yaw, Vector3(0, 1, 0)) * 
 		Matrix4::Translation(-position);
 }
+
+void Camera::AddCameraNode(const Vector3& positions, float yaws, float pitches) {
+	railNodes.push_back({ positions, yaws, pitches });
+}
+
+void Camera::UpdateCameraRail(float dt, float speed)
+{
+	if (railNodes.empty()) return;
+
+	const CameraNode& target = railNodes[currentNode];
+
+	// Move position toward target
+	Vector3 toTarget = target.position - position;
+	float distance = toTarget.Length();
+
+	if (distance < 0.1f) {
+		// Arrived at this node and move to next
+		currentNode++;
+		if (currentNode >= railNodes.size())
+			currentNode = 0; // loop (or remove to stop at end)
+		return;
+	}
+
+	Vector3 direction = toTarget.Normalised();
+	position += direction * speed * dt;
+
+	// Smooth yaw/pitch interpolation
+	yaw += (target.yaw - yaw) * (dt * 2.0f);
+	pitch += (target.pitch - pitch) * (dt * 2.0f);
+	std::cout << "pos: " << position << "  dist: " << distance << std::endl;
+}

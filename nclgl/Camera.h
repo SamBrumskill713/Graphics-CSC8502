@@ -1,9 +1,16 @@
 #pragma once
 #include "Matrix4.h"
 #include "Vector3.h"
+#include <vector>
 
 class Camera {
 public:
+	struct CameraNode {
+		Vector3 position;
+		float yaw;
+		float pitch;
+	};
+
 	Camera(void) {
 		yaw = 0.0f;
 		pitch = 0.0f;
@@ -31,13 +38,14 @@ public:
 	float GetPitch() const { return pitch; }
 	void SetPitch(float p) { pitch = p; }
 
-	//void cameraRailNodes(Vector3 positions, float yaws, float pitches);
+	void AddCameraNode(const Vector3& pos, float yaw, float pitch);
+
+	void UpdateCameraRail(float dt, float speed);
 
 protected:
 	float yaw;
 	float pitch;
 	Vector3 position;
-	//std::vector<Vector3> positions;
-	//std::vector<float> yaws;
-	//std::vector<float> pitches;
+	int currentNode = 0;
+	std::vector<CameraNode> railNodes;
 };
