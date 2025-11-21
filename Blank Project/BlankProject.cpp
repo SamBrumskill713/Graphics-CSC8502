@@ -4,7 +4,7 @@
 
 int main()	{
 	float cooldown = 0.25;
-	Window w("CSC5802", 1280, 720, true);
+	Window w("CSC5802", 1920, 1080, true);
 
 	if(!w.HasInitialised()) {
 		return -1;
@@ -28,7 +28,6 @@ int main()	{
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_1) && cooldown <= 0) {
 			cooldown = 0.25;
 			renderer.toggleCamera();
-			//std::cout << "button pressed";
 		}
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_F) && cooldown <= 0) {
 			cooldown = 0.25;
