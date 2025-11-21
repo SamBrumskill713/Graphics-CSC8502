@@ -99,33 +99,6 @@ void SceneNode::setShaderTextures()
 			}
 			return;
 		}
-		
-		/*else if (mesh && GetAnimation()) {
-			if (!GetAnimation()) {
-				glUniform1i(glGetUniformLocation(GetShader()->GetProgram(),
-					"diffuseTex"), 0);
-
-				vector<Matrix4> frameMatrices;
-
-				const Matrix4* invBindPose = GetMesh()->GetInverseBindPose();
-				const Matrix4* frameData = GetAnimation()->GetJointData(currentFrame);
-
-				for (unsigned int i = 0; i < GetMesh()->GetJointCount(); ++i) {
-					frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
-				}
-
-				int j = glGetUniformLocation(GetShader()->GetProgram(), "joints");
-				glUniformMatrix4fv(j, frameMatrices.size(), false, 
-					(float*)frameMatrices.data());
-
-				for (int i = 0; i < GetMesh()->GetSubMeshCount(); ++i) {
-					glActiveTexture(GL_TEXTURE0);
-					glBindTexture(GL_TEXTURE_2D, GetMatTexture(i));
-					GetMesh()->DrawSubMesh(i);
-				}
-			}
-			return;
-		}*/
 	}
 }
 

@@ -25,10 +25,6 @@ int main()	{
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_F5)) {
 			Shader::ReloadAllShaders();
 		}
-		if (Window::GetKeyboard()->KeyDown(KEYBOARD_1) && cooldown <= 0) {
-			cooldown = 0.25;
-			renderer.toggleCamera();
-		}
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_F) && cooldown <= 0) {
 			cooldown = 0.25;
 			renderer.toggleScene();

@@ -4,6 +4,7 @@
 
 void Camera::UpdateCamera(float dt) {
 	if (!isCameraRail) {
+		float cooldown = 0.25;
 		pitch -= (Window::GetMouse()->GetRelativePosition().y);
 		yaw -= (Window::GetMouse()->GetRelativePosition().x);
 
@@ -46,15 +47,9 @@ void Camera::UpdateCamera(float dt) {
 
 		if (Window::GetKeyboard()->KeyDown(KEYBOARD_SPACE)) {
 			position.y -= speed;
-
 		}
 	}
-
 	float trackSpeed = speed * dt;
-
-	if (isCameraRail) {
-		
-	}
 }
 
 Matrix4 Camera::BuildViewMatrix()
@@ -63,19 +58,3 @@ Matrix4 Camera::BuildViewMatrix()
 		Matrix4::Rotation(-yaw, Vector3(0, 1, 0)) * 
 		Matrix4::Translation(-position);
 }
-
-Vector3 Camera::Lerp(Vector3& startingPos, Vector3 endingPos, float timer)
-{
-	Vector3 newPos;
-	newPos.x = startingPos.x + (endingPos.x - startingPos.x) * timer;
-	newPos.y = startingPos.y + (endingPos.y - startingPos.y) * timer;
-	newPos.z = startingPos.z + (endingPos.z - startingPos.z) * timer;
-	return newPos;
-}
-
-void Camera::addCameraRailNode(Vector3 pos, float pitch, float yaw)
-{
-	railNodes.push_back({ pos, yaw, pitch });
-}
-
-

@@ -17,9 +17,6 @@ public:
 	~Renderer(void);
 	void RenderScene() override;
 	void UpdateScene(float dt) override;
-	void toggleCamera() { 
-		isCameraFree = !isCameraFree; 
-	}
 	void toggleScene() {
 		isMainScene = !isMainScene;
 		isTransScene = !isTransScene;
@@ -43,7 +40,6 @@ protected:
 	void checkTextures();
 	void checkShaders();
 	void checkBuffers();
-	void setCameraNodes();
 	void setVariables();
 	void setNodes();
 	void buildNodeLists(SceneNode* from);
@@ -57,9 +53,6 @@ protected:
 	void fillBuffers();
 	void combineBuffers();
 	void createPointLights();
-	void presentScene();
-	void drawPostProcess();
-	bool isCameraFree = true;
 	bool isShadow = false;
 	bool isMainScene = true;
 	bool isTransScene = false;

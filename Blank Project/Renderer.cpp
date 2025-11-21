@@ -16,7 +16,6 @@
 const int UFO_NUM = 4;
 const int LIGHT_NUM = 25;
 const int TREE_NUM = 10;
-const int POST_PASSES = 10;
 
 Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 	checkMeshes();
@@ -44,7 +43,6 @@ Renderer::Renderer(Window& parent) : OGLRenderer(parent) {
 Renderer::~Renderer(void) {
 	delete heightMap;
 	delete activeCamera;
-	//delete freeCamera;
 	delete reflectShader;
 	delete skyboxShader;
 	delete lightShader;
@@ -74,10 +72,6 @@ Renderer::~Renderer(void) {
 	delete houseMaterial;
 	delete heightMap;
 	delete heightMap2;
-	glDeleteTextures(2, bufferColourTex2);
-	glDeleteTextures(1, &bufferDepthTex2);
-	glDeleteFramebuffers(1, &bufferFBO2);
-	glDeleteFramebuffers(1, &processFBO);
 	for (auto tex : awesomeSkeletonMatTextures) { glDeleteTextures(1, &tex); }
 	for (auto tex : houseMatTextures) { glDeleteTextures(1, &tex); }
 	for (auto tex : soldierMatTextures) { glDeleteTextures(1, &tex); }
@@ -99,10 +93,6 @@ Renderer::~Renderer(void) {
 }
 
 void Renderer::UpdateScene(float dt) {
-	/*if (!isCameraFree) {
-		activeCamera->UpdateCameraRail(dt, 0.02f);
-	}*/
-	
 	activeCamera->UpdateCamera(dt);
 	viewMatrix = activeCamera->BuildViewMatrix();
 	projMatrix = Matrix4::Perspective(1.0f, 10000.0f,
@@ -157,8 +147,6 @@ void Renderer::RenderScene() {
 	fillBuffers();
 	createPointLights();
 	combineBuffers();
-	//drawPostProcess();
-	//presentScene();
 }
 
 void Renderer::DrawWater(float transparancy)
@@ -385,47 +373,6 @@ void Renderer::checkBuffers()
 	glDrawBuffers(2, buffers);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	/*glGenTextures(1, &bufferDepthTex2);
-	glBindTexture(GL_TEXTURE_2D, bufferDepthTex2);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, width, height, 0,
-		GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
-
-	for (int i = 0; i < 2; ++i) {
-		glGenTextures(1, &bufferColourTex2[i]);
-		glBindTexture(GL_TEXTURE_2D, bufferColourTex2[i]);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA,
-			GL_UNSIGNED_BYTE, NULL);
-	}
-
-	glGenFramebuffers(1, &bufferFBO2);
-	glGenFramebuffers(1, &processFBO);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO2);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
-		bufferDepthTex2, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_TEXTURE_2D,
-		bufferDepthTex2, 0);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-		bufferColourTex2[0], 0);
-
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE ||
-		!bufferDepthTex || !bufferColourTex2[0]) {
-		return;
-	}
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);*/
-}
-
-void Renderer::setCameraNodes()
-{
 }
 
 void Renderer::setVariables()
@@ -478,12 +425,10 @@ void Renderer::setVariables()
 	landMapRoot = new SceneNode();
 	transSceneRoot = new SceneNode();
 	setNodes();
-	//setCameraNodes();
 	waterRotate = 0.0f;
 	waterCycle = 0.0f;
 	currentFrame = 0;
 	frameTime = 0.0f;
-	//isShadow = false;
 }
 
 void Renderer::setNodes() {
@@ -507,24 +452,6 @@ void Renderer::setNodes() {
 		TreeNode->SetBoundingRadius(700.0f);
 		heightmapNode->AddChild(TreeNode);
 	}
-
-	//SceneNode* UFONode = new SceneNode(UFO);
-	//UFONode->SetShader(nodeShader);
-	//UFONode->SetTransform(UFOModel);
-	//UFONode->SetMatTextures(UFOMatTextures);
-	//UFONode->SetBoundingRadius(200.0f);
-	////UFOBodyNode->SetModelScale();
-	//heightmapNode->AddChild(UFONode);
-
-	/*SceneNode* StainedGlassNode = new SceneNode(quad);
-	StainedGlassNode->SetShader(nodeShader);
-	StainedGlassNode->SetTransform(Matrix4::Translation(Vector3(2000,
-		heightMap->GetHeightAt(2000, 2000), 2000)) * Matrix4::Scale(Vector3(300.0f,
-			300.0f, 300.0f)));
-	StainedGlassNode->AddTexture(stainedGlassTex);
-	StainedGlassNode->SetBoundingRadius(500.0f);
-	heightmapNode->AddChild(StainedGlassNode);*/
-
 	
 	Vector3 heightmapSize2 = heightMap2->GetHeightmapSize();
 	SceneNode* transHeightmapNode = new SceneNode(heightMap2);
@@ -533,15 +460,6 @@ void Renderer::setNodes() {
 	transHeightmapNode->AddTexture(terrainBump);
 	transHeightmapNode->SetBoundingRadius(heightmapSize.Length());
 	transSceneRoot->AddChild(transHeightmapNode);
-
-	/*SceneNode* houseNode = new SceneNode(houseMesh);
-	houseNode->SetShader(nodeShader);
-	houseNode->SetTransform(Matrix4::Translation(Vector3(4000,
-		heightMap->GetHeightAt(4000, 4000), 4000)) * Matrix4::Scale(Vector3(100.0f,
-			100.0f, 100.0f)));
-	houseNode->SetMatTextures(houseMatTextures);
-	houseNode->SetBoundingRadius(500.0f);
-	transHeightmapNode->AddChild(houseNode);*/
 
 	SceneNode* cubeNodeLocal = new SceneNode(cube);
 	cubeNodeLocal->SetShader(nodeShader);
@@ -812,7 +730,6 @@ void Renderer::fillBuffers()
 
 void Renderer::combineBuffers()
 {
-	//glBindFramebuffer(GL_FRAMEBUFFER, bufferFBO2);
 	BindShader(combineShader);
 	modelMatrix.ToIdentity();
 	UpdateShaderMatrices();
@@ -834,7 +751,6 @@ void Renderer::combineBuffers()
 	glBindTexture(GL_TEXTURE_2D, bufferDepthTex);
 
 	quad->Draw();
-	/*glClear(GL_DEPTH_BUFFER_BIT);*/
 }
 
 void Renderer::createPointLights()
@@ -887,54 +803,3 @@ void Renderer::createPointLights()
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
-
-//void Renderer::presentScene()
-//{
-//	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-//	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-//	BindShader(texturedShader);
-//	modelMatrix.ToIdentity();
-//	viewMatrix.ToIdentity();
-//	projMatrix.ToIdentity();
-//	UpdateShaderMatrices();
-//	glActiveTexture(GL_TEXTURE0);
-//	glBindTexture(GL_TEXTURE_2D, bufferColourTex2[0]);
-//	glUniform1i(glGetUniformLocation(texturedShader->GetProgram(), "diffuseTex"), 0);
-//	quad->Draw();
-//}
-
-//void Renderer::drawPostProcess()
-//{
-//	glBindFramebuffer(GL_FRAMEBUFFER, processFBO);
-//	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-//		GL_TEXTURE_2D, bufferColourTex2[1], 0);
-//	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-//
-//	BindShader(processShader);
-//	modelMatrix.ToIdentity();
-//	viewMatrix.ToIdentity();
-//	projMatrix.ToIdentity();
-//	UpdateShaderMatrices();
-//
-//	glDisable(GL_DEPTH_TEST);
-//
-//	glActiveTexture(GL_TEXTURE0);
-//	glUniform1i(glGetUniformLocation(processShader->GetProgram(), "sceneTex"), 0);
-//
-//	for (int i = 0; i < POST_PASSES; ++i) {
-//		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-//			bufferColourTex2[1], 0);
-//		glUniform1i(glGetUniformLocation(processShader->GetProgram(), "isVertical"), 0);
-//		glBindTexture(GL_TEXTURE_2D, bufferColourTex2[0]);
-//		quad->Draw();
-//
-//		glUniform1i(glGetUniformLocation(processShader->GetProgram(), "isVertical"), 1);
-//
-//		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-//			bufferColourTex2[0], 0);
-//		glBindTexture(GL_TEXTURE_2D, bufferColourTex2[1]);
-//		quad->Draw();
-//	}
-//	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-//	glEnable(GL_DEPTH_TEST);
-//}

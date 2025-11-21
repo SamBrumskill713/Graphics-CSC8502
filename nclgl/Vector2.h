@@ -11,6 +11,7 @@ _-_-_-_-_-_-_-|   /\_/\   NYANYANYAN
 _-_-_-_-_-_-_-""  ""   
 
 */
+#include <cmath>
 #include <iostream>
 
 class Vector2	{
@@ -22,6 +23,30 @@ public:
 	Vector2(const float x, const float y) {
 		this->x = x;
 		this->y = y;
+	}
+
+	Vector2 Normalised() {
+		Vector2 n = *this;
+		n.normalise();
+		return n;
+	}
+
+	void normalise() {
+		float length = Length();
+		if (Length() != 0.0f) {
+			length = 1.0f / length;
+			x = x * length;
+			y = y * length;
+		}
+
+	}
+
+	inline Vector2  operator*(const float a) const {
+		return Vector2(x * a, y * a);
+	}
+
+	float Length() {
+		return sqrt((x * x) + (y * y));
 	}
 
 	~Vector2(void){}

@@ -39,7 +39,7 @@ public:
 	}
 
 	void			Normalise() {
-		float length = Length();
+		float length = Length();		
 
 		if(length != 0.0f)	{
 			length = 1.0f / length;
