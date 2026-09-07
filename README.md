@@ -8,6 +8,8 @@ In this project I implemented:
 - Cube-mapped reflections
 - sky-box
 
+![image_alt](https://github.com/SamBrumskill713/Graphics-CSC8502/blob/35613217596389f2cb0aa474c9ecb6f75d2cea0c/Graphics-screenshot.png)
+
 ## Key-Binds
 - W - Move Forward
 - S - Move Backwards
